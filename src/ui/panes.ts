@@ -33,6 +33,7 @@ export function buildNovaPane(): void {
     doNova(false);
   });
   $<HTMLInputElement>('#autoNova').addEventListener('change', e => { S.autoNova = (e.target as HTMLInputElement).checked; });
+  $<HTMLInputElement>('#autoStar').addEventListener('change', e => { S.autoStar = (e.target as HTMLInputElement).checked; });
   onRefresh(refreshNovaPane);
 }
 
@@ -43,6 +44,8 @@ export function refreshNovaPane(): void {
   $('#novaBar').style.width = (g ? 100 : pct * 100) + '%';
   $('#autoNovaRow').hidden = !S.riftsDone.includes(AUTO_NOVA_RIFT);
   $<HTMLInputElement>('#autoNova').checked = S.autoNova;
+  $('#autoStarRow').hidden = !S.sl.autoStar;
+  $<HTMLInputElement>('#autoStar').checked = S.autoStar;
   const info = $('#novaInfo');
   if (S.rift) setText(info, 'Supernova is blocked while you are inside a Rift.');
   else if (g) setHTML(info, `Supernova now for <b style="color:var(--gold)">+${fmt(g)} ✦</b> · next ✦ at $${fmt(nextNovaAt(g))}`);
@@ -84,6 +87,7 @@ export function buildCollapsePane(): void {
     riftEls.set(R.id, { el: d, btn, lv: d.querySelector<HTMLElement>('.lv')! });
     rl.appendChild(d);
   }
+  $<HTMLInputElement>('#autoCol').addEventListener('change', e => { S.autoCol = (e.target as HTMLInputElement).checked; });
   const colBtn = $<HTMLButtonElement>('#colBtn');
   colBtn.addEventListener('click', () => {
     if (!colGain()) return;
@@ -100,6 +104,8 @@ export function refreshCollapsePane(): void {
   setHTML($('#colInfo'), S.rift ? 'Collapse is blocked while you are inside a Rift.' :
     g ? `Collapse now for <b style="color:#c9a6ff">+${fmt(g)} ◆</b>` : `${fmt(S.starsCycle)} / ${fmt(COLLAPSE_MIN)} Stardust earned since last Collapse`);
   $<HTMLButtonElement>('#colBtn').disabled = !g;
+  $('#autoColRow').hidden = !S.sl.autoCol;
+  $<HTMLInputElement>('#autoCol').checked = S.autoCol;
   refreshDarkShop();
   // Teaser for layer 4 until the first Singularity
   const tease = $('#singTease');
@@ -138,8 +144,6 @@ export function buildSingPane(): void {
     if (!armed(btn, 'Click again: resets Dark Matter and the Constellation')) return;
     doSingularity();
   });
-  $<HTMLInputElement>('#autoStar').addEventListener('change', e => { S.autoStar = (e.target as HTMLInputElement).checked; });
-  $<HTMLInputElement>('#autoCol').addEventListener('change', e => { S.autoCol = (e.target as HTMLInputElement).checked; });
   onRefresh(refreshSingPane);
 }
 
@@ -154,10 +158,6 @@ export function refreshSingPane(): void {
   else if (g) setHTML(info, `Singularity now for <b style="color:#ffb35c">+${fmt(g)} ◉</b> (from your best run this cycle, $${fmt(S.cyclePeak)})`);
   else setText(info, `Best run this cycle $${fmt(S.cyclePeak)} / $1e${SING_MIN_LOG}`);
   $<HTMLButtonElement>('#singBtn').disabled = !g;
-  $('#autoStarRow').hidden = !S.sl.autoStar;
-  $<HTMLInputElement>('#autoStar').checked = S.autoStar;
-  $('#autoColRow').hidden = !S.sl.autoCol;
-  $<HTMLInputElement>('#autoCol').checked = S.autoCol;
   $('#beyond').hidden = !S.singularities;
   if (!$('#beyond').hidden) setHTML($('#beyond'), stat.dilation >= 1
     ? 'Beyond the horizon: <b>???</b> Dilation is gone. Something new is coming in a future update.'

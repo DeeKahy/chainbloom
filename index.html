@@ -45,6 +45,7 @@
         <div class="bar"><i id="novaBar"></i></div>
         <button class="bigbtn" id="novaBtn" disabled>Go Supernova</button>
         <label class="toggle" id="autoNovaRow" hidden style="margin-top:10px"><input type="checkbox" id="autoNova"> Auto-Supernova when it would at least double your Stardust, or after 2 minutes</label>
+        <label class="toggle" id="autoStarRow" hidden style="margin-top:10px"><input type="checkbox" id="autoStar"> Autobuy Stardust upgrades (cheapest first)</label>
       </div>
       <div class="cat">Permanent upgrades</div>
       <div id="starList" style="display:flex;flex-direction:column;gap:8px"></div>
@@ -56,6 +57,7 @@
         <div id="colInfo" style="font-size:13px"></div>
         <div class="bar"><i id="colBar" style="background:linear-gradient(90deg,#6b3cff,#c9a6ff)"></i></div>
         <button class="bigbtn" id="colBtn" style="background:linear-gradient(90deg,#6b3cff,#c9a6ff);color:#fff" disabled>Collapse</button>
+        <label class="toggle" id="autoColRow" hidden style="margin-top:10px"><input type="checkbox" id="autoCol"> Auto-Collapse when it would at least double your Dark Matter, or after 5 minutes</label>
       </div>
       <div class="help" id="singTease" hidden></div>
       <div class="cat">Dark Matter upgrades</div>
@@ -71,8 +73,6 @@
         <div id="singInfo" style="font-size:13px"></div>
         <div class="bar"><i id="singBar" style="background:linear-gradient(90deg,#ff7a2e,#ffd9b0)"></i></div>
         <button class="bigbtn" id="singBtn" style="background:linear-gradient(90deg,#ff7a2e,#ffd9b0);color:#1a0d05" disabled>Singularity</button>
-        <label class="toggle" id="autoStarRow" hidden style="margin-top:10px"><input type="checkbox" id="autoStar"> Autobuy Stardust upgrades (cheapest first)</label>
-        <label class="toggle" id="autoColRow" hidden style="margin-top:10px"><input type="checkbox" id="autoCol"> Auto-Collapse when it would at least double your Dark Matter, or after 5 minutes</label>
       </div>
       <div class="cat">Singularity upgrades</div>
       <div id="slList" class="list"></div>
