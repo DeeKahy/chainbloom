@@ -49,7 +49,7 @@ The user thinks in layers and wants to keep adding them. Keep the code shaped so
 
 - **Balance is untuned.** Costs, growth rates, the $1M and 1,000-Stardust thresholds, and node prices are first guesses; the early game was never hand-played end to end. Prices live in `src/content/`, gain formulas in `src/systems/prestige.ts`, node cost in `src/sim/board.ts`.
 - **Never tested:** a full Entropy Rift run, and Auto-Supernova in real play.
-- **Numbers are plain doubles** and overflow at about 1e308. Fine for 3 layers. A deeper layer will need break_eternity.js behind `economy.ts` and `fmt()`.
+- **Numbers are plain doubles** and overflow at about 1e308, which endgame players reach (one was at 2e154 on 2026-11-08). `sanitizeState()` clamps every saved number to `Number.MAX_VALUE` (JSON would write Infinity as null and wipe progress) and `save()` refuses to write a NaN, so progress stops at the cap instead of breaking. Any growth past it, e.g. a 4th layer, needs break_eternity.js behind `economy.ts` and `fmt()`, with a save migration.
 - **The simulation still calls audio and particles directly,** so it can't run headless. Next structural step if balance work starts: have the simulation emit events (pop, chainFinished, nova) for audio, particles and UI to subscribe to, then add a fast-forward balance script that prints when each milestone is reached.
 
 ## Rules for changes

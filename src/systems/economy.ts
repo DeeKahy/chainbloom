@@ -24,9 +24,10 @@ export const rateAvg = (): number => rate.avg;
 export const autoRateAvg = (): number => rate.autoAvg;
 
 export function earn(v: number, ch: Chain | null): void {
-  S.money += v;
-  S.runEarned += v;
-  S.total += v;
+  // Capped at the largest double so it never becomes Infinity (see sanitizeState).
+  S.money = Math.min(S.money + v, Number.MAX_VALUE);
+  S.runEarned = Math.min(S.runEarned + v, Number.MAX_VALUE);
+  S.total = Math.min(S.total + v, Number.MAX_VALUE);
   rate.bucket += v;
   if (ch) {
     if (ch.auto) rate.autoBucket += v;

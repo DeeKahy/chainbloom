@@ -35,14 +35,29 @@ export function refreshPalette(): void {
   }
   const hn = board.hover && board.map.get(hk(board.hover[0], board.hover[1]));
   const tool = board.tool;
-  const desc = hn ? `<b>${NODES[hn.t].name}:</b> ${NODES[hn.t].desc}` :
+  let desc = hn ? `<b>${NODES[hn.t].name}:</b> ${NODES[hn.t].desc}` :
     tool === 'remove' ? '<b>Remove:</b> click a node to take it back for a full refund.' : `<b>${NODES[tool].name}:</b> ${NODES[tool].desc}`;
-  setHTML($('#palInfo'), `<b style="color:#7dffb0">${fmt(S.flux)} Flux</b> · orb value ×${fmt(stat.fluxMult)} from all Flux ever earned · core charge ${fmt(S.pulseBank)}<br>${desc}`);
+  if (board.armed) {
+    const an = board.map.get(hk(board.armed[0], board.armed[1]));
+    desc = tool === 'remove'
+      ? (an ? `<b>Tap again</b> to remove this ${NODES[an.t].name} (+${fmt(an.c)} Flux back).` : 'Nothing to remove here. Pick a node.')
+      : an && an.t === tool ? `This is already a ${NODES[tool].name}.`
+      : `<b>Tap again</b> to ${an ? `replace the ${NODES[an.t].name} with` : 'place'} a <b>${NODES[tool].name}</b> for ${fmt(nodeCost(tool, S.board.length - (an ? 1 : 0)))} Flux.`;
+  }
+  setHTML($('#palInfo'), `<b style="color:#7dffb0">${fmt(S.flux)} Flux</b> · orb value ×${fmt(stat.fluxMult)} · core charge ${fmt(S.pulseBank)}<br>${desc}`);
   board.palH = $('#palette').offsetHeight || board.palH;
+  // The board sits below whatever overlays the top of the stage (view buttons, and the HUD where it shows).
+  const top = $('#stage').getBoundingClientRect().top;
+  let bottom = $('#viewBtns').getBoundingClientRect().bottom;
+  const hud = $('#hud');
+  if (getComputedStyle(hud).display !== 'none') bottom = Math.max(bottom, hud.getBoundingClientRect().bottom);
+  board.topH = bottom - top + 10;
 }
 
 export function setView(v: View): void {
   app.view = v;
+  board.armed = null;
+  document.body.classList.toggle('boardview', v === 'board');
   $$('#viewBtns button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
   $('#palette').hidden = v !== 'board';
   $('#combo').style.display = v === 'board' ? 'none' : '';

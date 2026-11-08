@@ -1,4 +1,4 @@
-import { fresh, replaceState, S, SAVE_VERSION, type GameState } from './state';
+import { fresh, replaceState, S, sanitizeState, SAVE_VERSION, type GameState } from './state';
 
 /** Kept from the original single-file game so existing saves still load. */
 const KEY = 'chainbloom_v1';
@@ -51,6 +51,8 @@ export function save(autoRate: number): void {
   try {
     S.saved = Date.now();
     S.lastRate = autoRate;
+    // A NaN would be written as null and load back as 0: keep the last good save instead.
+    if (!sanitizeState()) { console.warn('Chainbloom: not saving, a value is NaN'); return; }
     localStorage.setItem(KEY, JSON.stringify(S));
   } catch { /* storage full or blocked: keep playing */ }
 }
@@ -61,6 +63,7 @@ export function clearSave(): void {
 
 /** Base64 of the JSON save, safe for non-ASCII. */
 export function exportSave(): string {
+  sanitizeState();
   const bytes = new TextEncoder().encode(JSON.stringify(S));
   let bin = '';
   for (const b of bytes) bin += String.fromCharCode(b);

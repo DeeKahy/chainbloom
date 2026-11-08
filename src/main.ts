@@ -10,7 +10,7 @@ import { initFieldGL } from './render/fieldGL';
 import { rebuildBoardMap, updateBoard } from './sim/board';
 import { spawnOrb, updateField, world } from './sim/world';
 import { load, save } from './state/save';
-import { S } from './state/state';
+import { S, sanitizeState } from './state/state';
 import { autoBuy, autoRateAvg } from './systems/economy';
 import { applyOfflineEarnings, checkRiftGoal, maybeAutoNova } from './systems/prestige';
 import { recalc } from './systems/stats';
@@ -54,6 +54,7 @@ refreshAll();
 const UI_INTERVAL = .12;
 const SAVE_INTERVAL = 5;
 let last = performance.now(), uiT = 0, saveT = 0;
+let capWarned = false;
 
 function frame(now: number): void {
   if (debug.paused) { last = now; requestAnimationFrame(frame); return; }
@@ -70,6 +71,8 @@ function frame(now: number): void {
     uiT = 0;
     recalc();
     if (S.dl.auto && S.autoBuy) autoBuy();
+    sanitizeState();
+    if (S.money >= Number.MAX_VALUE && !capWarned) { capWarned = true; toast('Money hit the number limit (1.8e308). It stays there for now.', '#ff5a6e'); }
     maybeAutoNova();
     checkRiftGoal();
     tickHud();

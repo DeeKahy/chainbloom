@@ -36,6 +36,16 @@ export function renderBoard(): void {
     ctx.stroke();
   }
 
+  // the hex picked by a first tap (touch): filled in the tool colour until the second tap
+  if (board.armed) {
+    const [x, y] = hexPix(board.armed[0], board.armed[1]);
+    const col = board.tool === 'remove' ? '#ff5a6e' : NODES[board.tool].col;
+    hexPath(x, y, s * .94);
+    ctx.globalAlpha = .3 + .15 * Math.sin(T * 8); ctx.fillStyle = col; ctx.fill();
+    ctx.globalAlpha = 1; ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+
   // links between occupied neighbours (each pair drawn once via the first 3 directions)
   ctx.strokeStyle = 'rgba(160,160,255,.22)'; ctx.lineWidth = 2; ctx.beginPath();
   const all = [{ q: 0, r: 0 }, ...S.board];

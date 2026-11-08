@@ -13,13 +13,14 @@ export function bindInput(): void {
   cv.addEventListener('pointerdown', e => {
     initAudio();
     const [x, y] = local(e);
-    if (app.view === 'board') boardClick(x, y);
+    if (app.view === 'board') boardClick(x, y, e.pointerType !== 'mouse');
     else detonateAt(x / field.scale, y / field.scale);
   });
   cv.addEventListener('pointermove', e => {
-    if (app.view !== 'board') return;
+    if (app.view !== 'board' || e.pointerType !== 'mouse') return;
     const h = pixHex(...local(e));
     board.hover = inBoard(h[0], h[1]) ? h : null;
   });
-  cv.addEventListener('pointerleave', () => { board.hover = null; });
+  // A finger "leaves" when lifted, which must not clear the hex it just picked.
+  cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') board.hover = null; });
 }

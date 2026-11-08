@@ -76,3 +76,24 @@ export function replaceState(next: GameState): void {
   for (const k of Object.keys(S)) delete (S as unknown as Record<string, unknown>)[k];
   Object.assign(S, next);
 }
+
+/**
+ * Plain doubles overflow to Infinity past ~1.8e308, and JSON writes Infinity as null, which would
+ * load back as 0 and wipe progress. Clamp every saved number to the largest finite double instead.
+ * Returns false if any value is NaN; the caller must not write the save then.
+ */
+export function sanitizeState(): boolean {
+  let ok = true;
+  const fix = (o: Record<string, unknown>, k: string): void => {
+    const v = o[k];
+    if (typeof v !== 'number') return;
+    if (Number.isNaN(v)) ok = false;
+    else if (v === Infinity) o[k] = Number.MAX_VALUE;
+    else if (v === -Infinity) o[k] = -Number.MAX_VALUE;
+  };
+  const top = S as unknown as Record<string, unknown>;
+  for (const k of Object.keys(top)) fix(top, k);
+  for (const m of [S.lv, S.st, S.dl]) for (const k of Object.keys(m)) fix(m, k);
+  for (const n of S.board) fix(n as unknown as Record<string, unknown>, 'c');
+  return ok;
+}

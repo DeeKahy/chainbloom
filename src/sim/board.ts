@@ -31,6 +31,10 @@ export const board = {
   coreFlash: 0,
   tool: 'collect' as Tool,
   hover: null as [number, number] | null,
+  /** Touch: the hex picked by the first tap; a second tap on it places or removes. */
+  armed: null as [number, number] | null,
+  /** Bottom of the overlays above the board (view buttons, HUD) in CSS px. */
+  topH: 92,
   /** Height of the palette overlay; the board shrinks to fit above it. */
   palH: 130,
 };
@@ -49,14 +53,14 @@ export function clearBoardFx(): void {
 export const inBoard = (q: number, r: number): boolean =>
   Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)) <= stat.boardR;
 
-const BOARD_TOP = 92;
-const boardAvail = () => Math.max(80, size.H - board.palH - 24 - BOARD_TOP);
+
+const boardAvail = () => Math.max(80, size.H - board.palH - 24 - board.topH);
 
 export function hexSize(): number {
   const R = stat.boardR;
-  return Math.max(6, Math.min(40, size.W / ((2 * R + 1) * 1.8), boardAvail() / ((2 * R + 1) * 1.55)));
+  return Math.max(6, Math.min(40, size.W / ((2 * R + 1) * 1.75), boardAvail() / ((2 * R + 1) * 1.55)));
 }
-const boardCY = () => BOARD_TOP + boardAvail() / 2;
+const boardCY = () => board.topH + boardAvail() / 2;
 
 export function hexPix(q: number, r: number): [number, number] {
   const s = hexSize();
@@ -139,11 +143,18 @@ export function updateBoard(dt: number): void {
   board.texts = board.texts.filter(t => t.life > 0);
 }
 
-/** Place, replace or remove a node with the current tool. */
-export function boardClick(x: number, y: number): void {
+/** Place, replace or remove a node with the current tool. On touch, the first tap only picks the hex. */
+export function boardClick(x: number, y: number, touch = false): void {
   initAudio();
   const [q, r] = pixHex(x, y);
-  if (!inBoard(q, r) || (q === 0 && r === 0)) return;
+  if (!inBoard(q, r) || (q === 0 && r === 0)) { board.armed = null; return; }
+  if (touch && !(board.armed && board.armed[0] === q && board.armed[1] === r)) {
+    board.armed = [q, r];
+    board.hover = [q, r];
+    tone(520, .06, .04, 'sine', 620);
+    return;
+  }
+  board.armed = null;
   const k = hk(q, r), ex = board.map.get(k);
   const tool = board.tool;
   if (tool === 'remove') {
