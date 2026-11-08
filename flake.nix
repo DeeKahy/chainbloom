@@ -15,7 +15,7 @@
           pname = "chainbloom";
           version = "1.0.0";
           src = self;
-          npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+          npmDepsHash = "sha256-FdERG1ruoLrp22De5YRLlGwOZAzfJPDM1sVLVPLr4Mw=";
           installPhase = ''
             runHook preInstall
             cp -r dist $out
