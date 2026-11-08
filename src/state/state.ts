@@ -1,0 +1,76 @@
+import { DU, SU } from '../content/prestige';
+import type { NodeType } from '../content/types';
+import { UP } from '../content/upgrades';
+
+export const SAVE_VERSION = 2;
+
+export interface BoardNode {
+  q: number;
+  r: number;
+  t: NodeType;
+  /** Flux paid for it (refunded on removal). */
+  c: number;
+  flash?: number;
+}
+
+/** Everything that persists in the save. Transient simulation state lives in sim/world.ts. */
+export interface GameState {
+  version: number;
+  // layer 1: money
+  money: number;
+  runEarned: number;
+  total: number;
+  lv: Record<string, number>;
+  seen: string[];
+  runTime: number;
+  // layer 2: stardust
+  stardust: number;
+  starsEver: number;
+  starsCycle: number;
+  st: Record<string, number>;
+  novas: number;
+  autoNova: boolean;
+  // layer 3: dark matter, constellation, rifts
+  dm: number;
+  dmEver: number;
+  collapses: number;
+  dl: Record<string, number>;
+  board: BoardNode[];
+  flux: number;
+  fluxEver: number;
+  pulseBank: number;
+  rift: number;
+  riftsDone: number[];
+  autoBuy: boolean;
+  // bookkeeping
+  popped: number;
+  best: number;
+  saved: number;
+  /** Average money/sec from automated sources at last save, used for offline earnings. */
+  lastRate: number;
+  mute: boolean;
+  playTime: number;
+}
+
+const levels = (defs: { id: string }[]): Record<string, number> =>
+  Object.fromEntries(defs.map(d => [d.id, 0]));
+
+export function fresh(): GameState {
+  return {
+    version: SAVE_VERSION,
+    money: 0, runEarned: 0, total: 0, lv: levels(UP), seen: [], runTime: 0,
+    stardust: 0, starsEver: 0, starsCycle: 0, st: levels(SU), novas: 0, autoNova: false,
+    dm: 0, dmEver: 0, collapses: 0, dl: levels(DU), board: [], flux: 0, fluxEver: 0, pulseBank: 0,
+    rift: 0, riftsDone: [], autoBuy: true,
+    popped: 0, best: 0, saved: 0, lastRate: 0, mute: false, playTime: 0,
+  };
+}
+
+/** The one live game state. Its identity never changes, so modules can import it directly. */
+export const S: GameState = fresh();
+
+/** Swap in a whole new state (load, import, wipe) without breaking references to S. */
+export function replaceState(next: GameState): void {
+  for (const k of Object.keys(S)) delete (S as unknown as Record<string, unknown>)[k];
+  Object.assign(S, next);
+}
