@@ -57,6 +57,7 @@ The user thinks in layers and wants to keep adding them. Keep the code shaped so
 - **Never break existing saves.** The storage key stays `chainbloom_v1`. If the `GameState` shape changes, bump `SAVE_VERSION` in `src/state/state.ts` and append a migration in `src/state/save.ts`. New upgrades need no migration: `normalize()` fills missing levels with 0.
 - **All resets go through `src/systems/prestige.ts`.** Each layer's reset calls the one below it (`resetStardustLayer` → `resetRunLayer`). Don't clear state by hand anywhere else.
 - **Content is data.** Upgrades, rifts and nodes are entries in `src/content/`. Shops render whatever is there.
+- **The orb field runs in world units, not pixels.** `field` in `src/render/canvas.ts` always has area `FIELD_AREA`, and only its shape follows the screen, so orb density and blast reach are the same on a phone and a big monitor (a small screen used to pack ~8× the orbs per blast). The renderer draws under `ctx.scale(field.scale)` with minimum on-screen sizes, and input divides by the scale. Drones and floating texts are drawn in screen pixels. The Constellation board stays in pixels.
 - **Keep the simulation DOM-free.** `src/sim/` talks to the UI only through `hooks` and the `refreshAll()` bus in `src/core/app.ts`.
 - **Don't change behaviour during refactors.** Balance changes go in their own commits.
 - **`npm run build`** runs a strict `tsc` and must pass. Playtest in the browser after gameplay changes; numbers can be set from the console via `window.__cb.S`.

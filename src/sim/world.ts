@@ -1,7 +1,7 @@
 import { blip, refillBudget, soundOn, tone } from '../audio';
 import { app, clock } from '../core/app';
 import { fmt, rand, TAU } from '../core/util';
-import { size } from '../render/canvas';
+import { field } from '../render/canvas';
 import { colorOf, CRY } from '../render/sprites';
 import { S } from '../state/state';
 import { earn, tickRate, type Chain } from '../systems/economy';
@@ -93,7 +93,7 @@ function near<T>(g: Grid<T>, x: number, y: number, r: number, fn: (o: T) => void
 
 // ---------- spawning & effects ----------
 export function spawnOrb(x?: number, y?: number, vx?: number, vy?: number): void {
-  const { W, H } = size;
+  const { W, H } = field;
   let type = 0;
   const r = Math.random();
   if (r < stat.pGold) type = 1;
@@ -160,7 +160,7 @@ function shatter(n: Crystal, depth: number, ch: Chain | null): void {
 }
 
 function growCrystal(): void {
-  const { W, H } = size, crystals = world.crystals;
+  const { W, H } = field, crystals = world.crystals;
   if (crystals.length >= stat.cryCap) return;
   let x: number, y: number, parent: Crystal | null = null;
   if (!crystals.length || Math.random() < .03) { x = rand(30, W - 30); y = rand(30, H - 30); }
@@ -242,7 +242,7 @@ export function screenFlash(col: string, amount: number): void {
 
 // ---------- update ----------
 export function updateField(dt: number): void {
-  const { W, H } = size;
+  const { W, H } = field;
   clock.T += dt;
   const T = clock.T;
   S.playTime += dt;

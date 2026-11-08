@@ -1,6 +1,6 @@
 import { initAudio } from './audio';
 import { app } from './core/app';
-import { cv } from './render/canvas';
+import { cv, field } from './render/canvas';
 import { board, boardClick, inBoard, pixHex } from './sim/board';
 import { detonateAt } from './sim/world';
 
@@ -14,7 +14,7 @@ export function bindInput(): void {
     initAudio();
     const [x, y] = local(e);
     if (app.view === 'board') boardClick(x, y);
-    else detonateAt(x, y);
+    else detonateAt(x / field.scale, y / field.scale);
   });
   cv.addEventListener('pointermove', e => {
     if (app.view !== 'board') return;

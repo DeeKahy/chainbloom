@@ -5,7 +5,7 @@ import { memoryStardust, seedMoney, SU } from '../content/prestige';
 import { riftById } from '../content/rifts';
 import type { RiftDef } from '../content/types';
 import { UP } from '../content/upgrades';
-import { size } from '../render/canvas';
+import { field } from '../render/canvas';
 import { colorOf } from '../render/sprites';
 import { clearBoardFx, rebuildBoardMap } from '../sim/board';
 import { addBlast, BlastKind, burst, clearAll, clearRun, screenFlash, world } from '../sim/world';
@@ -52,7 +52,7 @@ export const colGain = (): number =>
 export function doNova(auto: boolean): void {
   const g = novaGain();
   if (!g) return;
-  const { W, H } = size;
+  const { W, H } = field;
   const visible = world.orbs.slice();
   resetRunLayer();
   // Cosmetic shockwave from the orbs that were just wiped.
