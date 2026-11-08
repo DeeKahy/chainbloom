@@ -2,6 +2,7 @@ import { initAudio, tone } from '../audio';
 import { refreshAll } from '../core/app';
 import { fmt } from '../core/util';
 import { DU, memoryStardust, seedMoney, SU } from '../content/prestige';
+import { SL } from '../content/singularity';
 import { riftById, RIFTS } from '../content/rifts';
 import type { RiftDef, UpgradeDef } from '../content/types';
 import { UP } from '../content/upgrades';
@@ -68,6 +69,9 @@ export const colGain = (): number =>
 /** The first Singularity needs every Dark Matter upgrade maxed and every Rift sealed. */
 export const collapseComplete = (): boolean =>
   DU.every(u => S.dl[u.id] >= u.max) && RIFTS.every(r => S.riftsDone.includes(r.id));
+
+/** Gate for layer 5 (not built yet): every Singularity upgrade maxed. */
+export const singularityComplete = (): boolean => SL.every(u => S.sl[u.id] >= u.max);
 
 /** Money (as a power of ten) the cycle must peak at before a Singularity gives anything. */
 export const SING_MIN_LOG = 30;

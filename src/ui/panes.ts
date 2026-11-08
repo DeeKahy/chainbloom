@@ -8,10 +8,9 @@ import { STAT_ROWS, togglePin } from './statRows';
 import type { RiftDef } from '../content/types';
 import { exportSave, parseImport } from '../state/save';
 import { S } from '../state/state';
-import { stat } from '../systems/stats';
 import {
   colGain, COLLAPSE_MIN, collapseComplete, doCollapse, doNova, doSingularity, enterRift, importState, leaveRift, nextNovaAt,
-  NOVA_MIN, novaGain, SING_MIN_LOG, singGain, wipe,
+  NOVA_MIN, novaGain, SING_MIN_LOG, singGain, singularityComplete, wipe,
 } from '../systems/prestige';
 import { currencyShop, refreshRunShop } from './shop';
 import { armed, toast } from './toast';
@@ -159,9 +158,12 @@ export function refreshSingPane(): void {
   else setText(info, `Best run this cycle $${fmt(S.cyclePeak)} / $1e${SING_MIN_LOG}`);
   $<HTMLButtonElement>('#singBtn').disabled = !g;
   $('#beyond').hidden = !S.singularities;
-  if (!$('#beyond').hidden) setHTML($('#beyond'), stat.dilation >= 1
-    ? 'Beyond the horizon: <b>???</b> Dilation is gone. Something new is coming in a future update.'
-    : `Beyond the horizon: <b>???</b> Lift dilation all the way to ^1.00 (now ^${stat.dilation.toFixed(2)}).`);
+  if (!$('#beyond').hidden) {
+    const maxed = SL.filter(u => S.sl[u.id] >= u.max).length;
+    setHTML($('#beyond'), singularityComplete()
+      ? 'Beyond the horizon: <b>???</b> Every Singularity upgrade is maxed. The next layer is coming in a future update.'
+      : `Beyond the horizon: <b>???</b> Max every Singularity upgrade (${maxed} / ${SL.length}).`);
+  }
   refreshSingShop();
 }
 
