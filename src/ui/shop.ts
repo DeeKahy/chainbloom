@@ -70,13 +70,13 @@ export function currencyShop(o: CurrencyShopOptions): () => void {
       c.lv.textContent = single ? '' : `Lv ${l}${u.max < 100 ? '/' + u.max : ''}`;
       if (l >= u.max) {
         c.el.className = `up ${o.cls} maxed`;
-        c.ds.textContent = single ? u.desc(0, stat) : 'Maxed';
+        c.ds.textContent = single ? u.desc(0, 1, stat) : 'Maxed';
         c.cost.textContent = single ? 'OWNED' : 'MAX';
         continue;
       }
       const cost = Math.ceil(u.base * u.g ** l);
       c.el.className = `up ${o.cls}` + (bal >= cost ? ' afford' : '');
-      c.ds.textContent = u.desc(l, stat);
+      c.ds.textContent = u.desc(l, l + 1, stat);
       c.cost.textContent = `${fmt(cost)} ${o.unit}`;
     }
   };
@@ -113,7 +113,7 @@ export function buildRunShop(pane: HTMLElement, onBuy: () => void): void {
 }
 
 function maxedText(u: RunUpgradeDef, l: number): string {
-  const after = u.desc(l - 1, stat).split('→')[1];
+  const after = u.desc(l - 1, l, stat).split('→')[1];
   return after ? 'Maxed: ' + after.trim() : 'Maxed';
 }
 
@@ -151,7 +151,7 @@ export function refreshRunShop(): void {
     const [n, cost] = costFor(u, l, S.money);
     const afford = S.money >= cost;
     c.el.className = 'up' + (afford ? ' afford' : '') + (c.el.classList.contains('flash') ? ' flash' : '');
-    c.ds.textContent = u.desc(l, stat);
+    c.ds.textContent = u.desc(l, l + n, stat);
     c.cost.textContent = '$' + fmt(cost) + (n > 1 ? `  (×${n})` : '');
   }
   paneUp.querySelectorAll<HTMLElement>('.cat').forEach(h => { h.style.display = catsVisible[h.dataset.cat!] ? '' : 'none'; });

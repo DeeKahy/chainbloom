@@ -8,7 +8,8 @@ export interface UpgradeDef {
   base: number;
   g: number;
   max: number;
-  desc: (level: number, stat: Stats) => string;
+  /** Text for going from level `from` to level `to` (more than one step with Buy ×10 / Max). */
+  desc: (from: number, to: number, stat: Stats) => string;
 }
 
 /** A run upgrade (money shop): adds a category and an optional unlock condition. */

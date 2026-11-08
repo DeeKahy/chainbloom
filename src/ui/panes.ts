@@ -8,7 +8,7 @@ import type { RiftDef } from '../content/types';
 import { exportSave, parseImport } from '../state/save';
 import { S } from '../state/state';
 import {
-  colGain, COLLAPSE_MIN, doCollapse, doNova, enterRift, importState, leaveRift, nextNovaAt, novaGain, wipe,
+  colGain, COLLAPSE_MIN, doCollapse, doNova, enterRift, importState, leaveRift, nextNovaAt, NOVA_MIN, novaGain, wipe,
 } from '../systems/prestige';
 import { currencyShop, refreshRunShop } from './shop';
 import { armed, toast } from './toast';
@@ -36,7 +36,7 @@ export function buildNovaPane(): void {
 export function refreshNovaPane(): void {
   $('#sdCount').textContent = fmt(S.stardust);
   const g = novaGain();
-  const pct = Math.min(1, Math.log10(Math.max(1, S.runEarned)) / 6);
+  const pct = Math.min(1, S.runEarned / NOVA_MIN);
   $('#novaBar').style.width = (g ? 100 : pct * 100) + '%';
   $('#autoNovaRow').hidden = !S.riftsDone.includes(AUTO_NOVA_RIFT);
   $<HTMLInputElement>('#autoNova').checked = S.autoNova;
