@@ -24,6 +24,10 @@ const MIGRATIONS: ((d: RawSave) => void)[] = [
   d => {
     if (d.cyclePeak === undefined) d.cyclePeak = typeof d.total === 'number' ? d.total : 0;
   },
+  // 4 → 5: Stardust Autobuyer toggle (on by default; it does nothing until the upgrade is bought).
+  d => {
+    if (typeof d.autoStar !== 'boolean') d.autoStar = true;
+  },
 ];
 
 /** Turn any parsed save object into a complete, current GameState. */

@@ -11,7 +11,7 @@ import { rebuildBoardMap, updateBoard } from './sim/board';
 import { spawnOrb, updateField, world } from './sim/world';
 import { load, save } from './state/save';
 import { S, sanitizeState } from './state/state';
-import { autoBuy, autoRateAvg } from './systems/economy';
+import { autoBuy, autoBuyStardust, autoRateAvg } from './systems/economy';
 import { applyOfflineEarnings, checkRiftGoal, maybeAutoNova, tickPrestige } from './systems/prestige';
 import { recalc } from './systems/stats';
 import { buildHud, frameHud, tickHud } from './ui/hud';
@@ -72,6 +72,7 @@ function frame(now: number): void {
     uiT = 0;
     recalc();
     if (S.dl.auto && S.autoBuy) autoBuy();
+    if (S.sl.autoStar && S.autoStar) autoBuyStardust();
     sanitizeState();
     if (S.money >= Number.MAX_VALUE && !capWarned) { capWarned = true; toast('Money hit the number limit (1.8e308). It stays there for now.', '#ff5a6e'); }
     maybeAutoNova();

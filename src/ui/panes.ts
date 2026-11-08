@@ -138,6 +138,7 @@ export function buildSingPane(): void {
     if (!armed(btn, 'Click again: resets Dark Matter and the Constellation')) return;
     doSingularity();
   });
+  $<HTMLInputElement>('#autoStar').addEventListener('change', e => { S.autoStar = (e.target as HTMLInputElement).checked; });
   $<HTMLInputElement>('#autoCol').addEventListener('change', e => { S.autoCol = (e.target as HTMLInputElement).checked; });
   onRefresh(refreshSingPane);
 }
@@ -153,6 +154,8 @@ export function refreshSingPane(): void {
   else if (g) setHTML(info, `Singularity now for <b style="color:#ffb35c">+${fmt(g)} ◉</b> (from your best run this cycle, $${fmt(S.cyclePeak)})`);
   else setText(info, `Best run this cycle $${fmt(S.cyclePeak)} / $1e${SING_MIN_LOG}`);
   $<HTMLButtonElement>('#singBtn').disabled = !g;
+  $('#autoStarRow').hidden = !S.sl.autoStar;
+  $<HTMLInputElement>('#autoStar').checked = S.autoStar;
   $('#autoColRow').hidden = !S.sl.autoCol;
   $<HTMLInputElement>('#autoCol').checked = S.autoCol;
   $('#beyond').hidden = !S.singularities;

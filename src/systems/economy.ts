@@ -1,6 +1,7 @@
 import { app, clock } from '../core/app';
 import type { RunUpgradeDef, UpgradeDef } from '../content/types';
 import { UP } from '../content/upgrades';
+import { SU } from '../content/prestige';
 import { S } from '../state/state';
 import { recalc, stat } from './stats';
 
@@ -102,6 +103,23 @@ export function autoBuy(): void {
     if (!best || S.money < bc) break;
     S.money -= bc;
     S.lv[best.id]++;
+    recalc();
+  }
+}
+
+/** Stardust Autobuyer (Singularity upgrade): repeatedly buys the cheapest Stardust upgrade. */
+export function autoBuyStardust(): void {
+  for (let i = 0; i < 40; i++) {
+    let best: UpgradeDef | null = null, bc = Infinity;
+    for (const u of SU) {
+      const l = S.st[u.id];
+      if (l >= u.max) continue;
+      const c = Math.ceil(u.base * u.g ** l);
+      if (c < bc) { bc = c; best = u; }
+    }
+    if (!best || S.stardust < bc) break;
+    S.stardust -= bc;
+    S.st[best.id]++;
     recalc();
   }
 }

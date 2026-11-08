@@ -35,6 +35,8 @@ export const SL: UpgradeDef[] = [
     desc: (l, t) => `Flares last ${20 + 5 * l}s → ${20 + 5 * t}s` },
   { id: 'corona', name: 'Corona', base: 6, g: 1.8, max: 10,
     desc: (l, t) => `A flare lifts dilation by +${(.1 + .02 * l).toFixed(2)} → +${(.1 + .02 * t).toFixed(2)}` },
+  { id: 'autoStar', name: 'Stardust Autobuyer', base: 12, g: 1, max: 1,
+    desc: () => 'Automatically buys the cheapest Stardust upgrade you can afford. Toggle it in this tab.' },
   { id: 'autoCol', name: 'Auto-Collapse', base: 15, g: 1, max: 1,
     desc: () => 'Collapses for you when it would at least double your Dark Matter, or after 5 minutes. Toggle it in this tab.' },
   { id: 'keepBoard', name: 'Star Chart', base: 20, g: 1, max: 1,
