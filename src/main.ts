@@ -12,12 +12,12 @@ import { spawnOrb, updateField, world } from './sim/world';
 import { load, save } from './state/save';
 import { S, sanitizeState } from './state/state';
 import { autoBuy, autoRateAvg } from './systems/economy';
-import { applyOfflineEarnings, checkRiftGoal, maybeAutoNova } from './systems/prestige';
+import { applyOfflineEarnings, checkRiftGoal, maybeAutoNova, tickPrestige } from './systems/prestige';
 import { recalc } from './systems/stats';
 import { buildHud, frameHud, tickHud } from './ui/hud';
 import { buildPalette } from './ui/palette';
 import { buildPins } from './ui/pins';
-import { buildCollapsePane, buildNovaPane, buildStatsPane } from './ui/panes';
+import { buildCollapsePane, buildNovaPane, buildSingPane, buildStatsPane } from './ui/panes';
 import { buildRunShop } from './ui/shop';
 import { toast } from './ui/toast';
 
@@ -37,6 +37,7 @@ new ResizeObserver(resize).observe($('#stage'));
 buildRunShop($('#pane-up'), () => tickHud());
 buildNovaPane();
 buildCollapsePane();
+buildSingPane();
 buildStatsPane();
 buildPalette();
 buildPins();
@@ -74,6 +75,7 @@ function frame(now: number): void {
     sanitizeState();
     if (S.money >= Number.MAX_VALUE && !capWarned) { capWarned = true; toast('Money hit the number limit (1.8e308). It stays there for now.', '#ff5a6e'); }
     maybeAutoNova();
+    tickPrestige();
     checkRiftGoal();
     tickHud();
   }

@@ -1,6 +1,6 @@
 import { clock } from '../core/app';
 import { TAU } from '../core/util';
-import { world, BlastKind, WELL_GLOW } from '../sim/world';
+import { world, BlastKind, HOLE_CORE, HOLE_FEED, WELL_GLOW } from '../sim/world';
 import { S } from '../state/state';
 import { stat } from '../systems/stats';
 import { ctx, field, size } from './canvas';
@@ -44,6 +44,27 @@ export function renderField(): void {
     ctx.strokeStyle = 'rgba(185,139,255,.35)'; ctx.lineWidth = 1.5 * thick;
     for (let k = 0; k < 3; k++) {
       ctx.beginPath(); ctx.arc(w.x, w.y, 22 + k * 14, w.a * (2 - k * .5) + k, w.a * (2 - k * .5) + k + 2.2); ctx.stroke();
+    }
+  }
+
+  // black hole (layer 4): the same layers as the WebGL shader, simplified
+  if (stat.hole) {
+    const hx = field.W / 2, hy = field.H / 2, flare = world.flareT > 0 ? 1 : 0, core = HOLE_CORE;
+    let g = ctx.createRadialGradient(hx, hy, core, hx, hy, HOLE_FEED);
+    g.addColorStop(0, `rgba(255,140,50,${.12 + .14 * flare})`); g.addColorStop(1, 'rgba(255,140,50,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(hx, hy, HOLE_FEED, 0, TAU); ctx.fill();
+    g = ctx.createRadialGradient(hx, hy, core, hx, hy, core + 80);
+    g.addColorStop(0, `rgba(255,240,215,${.5 + .5 * flare})`); g.addColorStop(.4, `rgba(255,120,40,${.3 + .3 * flare})`); g.addColorStop(1, 'rgba(255,120,40,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(hx, hy, core + 80, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(hx, hy, core, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,217,153,.8)'; ctx.lineWidth = 2 * thick;
+    ctx.beginPath(); ctx.arc(hx, hy, core + 1.5, 0, TAU); ctx.stroke();
+    ctx.lineWidth = 2.5 * thick;
+    ctx.strokeStyle = 'rgba(255,178,90,.14)'; ctx.beginPath(); ctx.arc(hx, hy, core + 104, 0, TAU); ctx.stroke();
+    const m = world.mass / stat.massCap;
+    if (m > 0) {
+      ctx.strokeStyle = 'rgba(255,178,90,.9)'; ctx.beginPath();
+      ctx.arc(hx, hy, core + 104, -Math.PI / 2, -Math.PI / 2 + m * TAU); ctx.stroke();
     }
   }
 

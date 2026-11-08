@@ -36,6 +36,33 @@ export interface Well { x: number; y: number; vx: number; vy: number; a: number;
 /** Radius of a well's glow, in world units. Orbs popped inside it are worth stat.wellMult. */
 export const WELL_GLOW = 120;
 
+/** Black hole at the field's centre (layer 4), in world units: pull reach, feeding zone, repelling core. */
+export const HOLE_PULL = 420, HOLE_FEED = 210, HOLE_CORE = 46;
+
+/** Pay out an orb's value, dilated after the first Singularity (flares lift the exponent for a while). */
+function payout(v: number, ch: Chain | null): void {
+  if (stat.hole) {
+    const d = Math.min(1, stat.dilation + (world.flareT > 0 ? stat.flareBonus : 0));
+    if (d < 1 && v > 1) v = v ** d;
+  }
+  earn(v, ch);
+}
+
+/** Pops near the black hole feed it mass; a full meter sets off a flare. */
+function feedHole(x: number, y: number): void {
+  const { W, H } = field;
+  if ((x - W / 2) ** 2 + (y - H / 2) ** 2 > HOLE_FEED * HOLE_FEED) return;
+  world.mass = Math.min(stat.massCap, world.mass + stat.massGain);
+  if (world.mass >= stat.massCap && world.flareT <= 0) {
+    world.mass = 0;
+    world.flareT = stat.flareDur;
+    screenFlash('255,170,80', .45);
+    world.shake = Math.min(14, world.shake + 6);
+    if (soundOn()) { tone(110, 1.4, .12, 'sawtooth', 660); tone(220, 1.2, .06, 'sine', 1320); }
+    hooks.flare();
+  }
+}
+
 const inWellGlow = (x: number, y: number): boolean =>
   world.wells.some(w => (w.x - x) ** 2 + (w.y - y) ** 2 < WELL_GLOW ** 2);
 export interface Drone { a: number; t: number; x: number; y: number }
@@ -61,12 +88,17 @@ export const world = {
   lastBanner: 0,
   /** The most recently finished chain, for the Stats pane and pinned stats. */
   lastChain: { count: 0, total: 0, depth: 0 },
+  /** Black hole (layer 4): mass fed by nearby pops, and seconds left of the current flare. */
+  mass: 0,
+  flareT: 0,
+  holeA: 0,
 };
 
 /** Hook for the big "N CHAIN" banner, set by the HUD so the sim stays DOM-free. */
 export const hooks = {
   banner: (_count: number) => { /* set by ui */ },
   chainFinished: (_c: Chain) => { /* set by board */ },
+  flare: () => { /* set by ui */ },
 };
 
 // ---------- spatial hash ----------
@@ -144,7 +176,8 @@ function pop(o: Orb, depth: number, ch: Chain | null): void {
   o.dead = true;
   const col = colorOf(o);
   const inWell = world.wells.length > 0 && inWellGlow(o.x, o.y);
-  earn(stat.value * col.mult * stat.combo ** depth * (inWell ? stat.wellMult : 1), ch);
+  payout(stat.value * col.mult * stat.combo ** depth * (inWell ? stat.wellMult : 1), ch);
+  if (stat.hole) feedHole(o.x, o.y);
   if (inWell) burst(o.x, o.y, '#b98bff', 5, 90, .45);
   if (ch && depth > ch.maxD) ch.maxD = depth;
   S.popped++;
@@ -242,6 +275,7 @@ export function clearRun(): void {
 export function clearAll(): void {
   clearRun();
   world.parts = []; world.texts = []; world.wells = []; world.drones = []; world.beams = [];
+  world.mass = 0; world.flareT = 0;
   world.shake = 0; world.flash = 0;
 }
 
@@ -257,6 +291,7 @@ export function updateField(dt: number): void {
   const T = clock.T;
   S.playTime += dt;
   S.runTime += dt;
+  S.colTime += dt;
   refillBudget(dt);
 
   // spawning
@@ -284,6 +319,13 @@ export function updateField(dt: number): void {
     }
   }
 
+  // black hole (layer 4)
+  if (stat.hole) {
+    world.holeA += dt * (world.flareT > 0 ? 2.4 : .8);
+    if (world.flareT > 0) world.flareT = Math.max(0, world.flareT - dt);
+  }
+  const hx = W / 2, hy = H / 2;
+
   // orbs
   const damp = 1 - .55 * dt;
   for (const o of world.orbs) {
@@ -295,6 +337,15 @@ export function updateField(dt: number): void {
         const f = 110 * (1 - d / 320) * dt * (d < 30 ? -.5 : 1);
         o.vx += (dx / d * f) - (dy / d) * f * .55;
         o.vy += (dy / d * f) + (dx / d) * f * .55;
+      }
+    }
+    if (stat.hole) {
+      // a stronger, wider swirl than a well; the core pushes orbs back out so they orbit instead of vanishing
+      const dx = hx - o.x, dy = hy - o.y, d = Math.hypot(dx, dy);
+      if (d < HOLE_PULL && d > 1) {
+        const f = 150 * (1 - d / HOLE_PULL) * dt * (d < HOLE_CORE ? -1.4 : 1);
+        o.vx += (dx / d * f) - (dy / d) * f * .7;
+        o.vy += (dy / d * f) + (dx / d) * f * .7;
       }
     }
     o.vx *= damp; o.vy *= damp;
@@ -350,7 +401,7 @@ export function updateField(dt: number): void {
     c.timer -= dt;
     if (c.timer <= 0) {
       c.state = 2; cryDead = true;
-      earn(stat.value * stat.cryVal * stat.combo ** c.depth, c.ch);
+      payout(stat.value * stat.cryVal * stat.combo ** c.depth, c.ch);
       burst(c.x, c.y, CRY, 5, 110, .45);
       blip(c.depth + 1, 0);
       addBlast(c.x, c.y, 26, c.depth, c.ch, BlastKind.Crystal);

@@ -45,8 +45,16 @@ The user thinks in layers and wants to keep adding them. Keep the code shaped so
   - Entropy (orbs decay after 5 s): unlocks Auto-Supernova.
 - **Dark Matter upgrades:** ×3 value, Stardust gain, Autobuyer, a faster core, starting Stardust, and a bigger board.
 
+**Layer 4: Singularity → ◉.** Unlocks once every Dark Matter upgrade is maxed and every Rift is sealed (the endgame of layer 3; `collapseComplete()`). After that, a Singularity is available whenever the cycle's best run (`S.cyclePeak`, the highest `runEarned` since the last Singularity) reaches $1e30. Gain is `floor((log10(cyclePeak)/30)^2.5 × singMult)`: ~60 at 1e154. It resets Dark Matter and its upgrades, the Constellation and Flux, and keeps Rift seals, records and collapse count.
+- **Dilation:** from the first Singularity on, every orb payout is raised to `stat.dilation` (^0.5, +0.05 per Event Horizon level, up to ^1). This is the deliberate slowdown, and it keeps numbers far below the 1e308 cap. `payout()` in `src/sim/world.ts` applies it.
+- **Black hole:** sits at the field centre (`HOLE_*` in world.ts), pulls orbs into a swirl, and pops within `HOLE_FEED` add mass. A full meter (`stat.massCap`) sets off a flare: dilation +`flareBonus` for `flareDur` seconds. Mass and flare are transient (not saved).
+- **Upgrades** (`src/content/singularity.ts`): Event Horizon, Chain Memory (gain × `chainMemoryMult(S.best)`: ×6.1 at a 100K chain, flattening fast after), Hawking Radiation, Accretion, Long Flare, Corona, Auto-Collapse, Star Chart (keeps the board layout).
+- **Next:** a 5th layer (the "Multiverse": more orb fields, chains crossing between them) is teased once dilation reaches ^1. Not built yet; see the performance note under Known gaps.
+
 ## Known gaps (as of 2026-11-08)
 
+- **Layer 4 balance is a first guess** (2026-11-08): gain exponent, $1e30 minimum, upgrade prices and the 600-mass flare are untested in real play. The aim was a few days of on/off play from the first Singularity to ^1.
+- **Performance for more fields (layer 5):** one field costs ~1–1.5 ms/frame of simulation on desktop, ~4–5 ms on a phone. The plan when it matters: simulate only visible fields, and credit hidden ones at their measured rates (which would also let a backgrounded tab catch up; right now it earns nothing until reload). That needs the simulation to stop calling audio/particles directly first.
 - **Balance is untuned.** Costs, growth rates, the $1M and 1,000-Stardust thresholds, and node prices are first guesses; the early game was never hand-played end to end. Prices live in `src/content/`, gain formulas in `src/systems/prestige.ts`, node cost in `src/sim/board.ts`.
 - **Never tested:** a full Entropy Rift run, and Auto-Supernova in real play.
 - **Numbers are plain doubles** and overflow at about 1e308, which endgame players reach (one was at 2e154 on 2026-11-08). `sanitizeState()` clamps every saved number to `Number.MAX_VALUE` (JSON would write Infinity as null and wipe progress) and `save()` refuses to write a NaN, so progress stops at the cap instead of breaking. Any growth past it, e.g. a 4th layer, needs break_eternity.js behind `economy.ts` and `fmt()`, with a save migration.

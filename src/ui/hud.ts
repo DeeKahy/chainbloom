@@ -1,11 +1,12 @@
 import { app, onRefresh, type BuyAmount, type Tab } from '../core/app';
 import { $, $$, fmt, replayClass, setText } from '../core/util';
 import { riftById } from '../content/rifts';
-import { hooks } from '../sim/world';
+import { hooks, world } from '../sim/world';
 import { S } from '../state/state';
 import { rateAvg } from '../systems/economy';
-import { colGain, novaGain } from '../systems/prestige';
-import { refreshCollapsePane, refreshNovaPane, refreshStatsPane } from './panes';
+import { colGain, collapseComplete, novaGain, singGain } from '../systems/prestige';
+import { stat } from '../systems/stats';
+import { refreshCollapsePane, refreshNovaPane, refreshSingPane, refreshStatsPane } from './panes';
 import { refreshPalette, setView } from './palette';
 import { refreshPins } from './pins';
 import { refreshRunShop } from './shop';
@@ -13,7 +14,7 @@ import { toast } from './toast';
 
 const el = {
   money: $('#money'), rate: $('#rate'), ready: $('#ready'), riftHud: $('#riftHud'), combo: $('#combo'),
-  novaTab: $('#novaTab'), colTab: $('#colTab'), viewBtns: $('#viewBtns'), autoBuyRow: $('#autoBuyRow'),
+  novaTab: $('#novaTab'), colTab: $('#colTab'), singTab: $('#singTab'), dilHud: $('#dilHud'), viewBtns: $('#viewBtns'), autoBuyRow: $('#autoBuyRow'),
   autoBuy: $<HTMLInputElement>('#autoBuy'), mute: $('#mute'), buyamt: $('#buyamt'),
 };
 
@@ -55,7 +56,8 @@ export function buildHud(): void {
     if (!S.collapses && app.view === 'board') setView('orbs');
     if (S.runEarned < 2.5e5 && !S.novas) el.novaTab.hidden = true;
     if (S.starsCycle < 300 && !S.collapses) el.colTab.hidden = true;
-    if (el.novaTab.hidden && app.tab === 'nova' || el.colTab.hidden && app.tab === 'col') selectTab('up');
+    if (!collapseComplete() && !S.singularities) el.singTab.hidden = true;
+    if (el.novaTab.hidden && app.tab === 'nova' || el.colTab.hidden && app.tab === 'col' || el.singTab.hidden && app.tab === 'sing') selectTab('up');
     refreshRunShop();
   });
 }
@@ -64,11 +66,15 @@ export function refreshVisibleTab(): void {
   if (app.tab === 'up') refreshRunShop();
   if (app.tab === 'nova') refreshNovaPane();
   if (app.tab === 'col') refreshCollapsePane();
+  if (app.tab === 'sing') refreshSingPane();
   if (app.tab === 'stats') refreshStatsPane();
 }
 
 /** Every frame: animate the money counter toward its real value. */
 export function frameHud(dt: number): void {
+  // Ease toward the real value, but jump across big gaps (a reset, or a huge payout): easing
+  // linearly across 100 orders of magnitude would take half a minute.
+  if (S.money > dispMoney * 100 || S.money < dispMoney / 100) dispMoney = S.money;
   dispMoney += (S.money - dispMoney) * Math.min(1, dt * 10);
   if (Math.abs(S.money - dispMoney) < .5) dispMoney = S.money;
   setText(el.money, '$' + fmt(dispMoney));
@@ -93,10 +99,25 @@ export function tickHud(): void {
     el.colTab.hidden = false;
     if (S.playTime > 1) toast('Collapse unlocked', '#c9a6ff');
   }
+  if ((collapseComplete() || S.singularities > 0) && el.singTab.hidden) {
+    el.singTab.hidden = false;
+    if (S.playTime > 1) toast('Singularity unlocked', '#ffb35c');
+  }
   el.viewBtns.hidden = !S.collapses;
 
-  const cg = colGain() > 0;
-  setText(el.ready, cg ? '◆ Collapse ready ◆' : '✦ Supernova ready ✦');
-  el.ready.style.color = cg ? '#c9a6ff' : '';
-  el.ready.classList.toggle('on', cg || novaGain() > 0);
+  // dilation and the black hole's flare
+  if (stat.hole) {
+    const flare = world.flareT > 0;
+    const d = Math.min(1, stat.dilation + (flare ? stat.flareBonus : 0));
+    setText(el.dilHud, flare ? `✸ Flare · dilation ^${d.toFixed(2)} · ${Math.ceil(world.flareT)}s`
+      : `Dilation ^${d.toFixed(2)} · mass ${Math.floor(world.mass / stat.massCap * 100)}%`);
+    el.dilHud.classList.toggle('flare', flare);
+  } else setText(el.dilHud, '');
+
+  const sg = singGain() > 0, cg = colGain() > 0;
+  setText(el.ready, sg ? '◉ Singularity ready ◉' : cg ? '◆ Collapse ready ◆' : '✦ Supernova ready ✦');
+  el.ready.style.color = sg ? '#ffb35c' : cg ? '#c9a6ff' : '';
+  el.ready.classList.toggle('on', sg || cg || novaGain() > 0);
 }
+
+hooks.flare = () => toast('✸ Flare! Dilation eases for a while: chain hard now.', '#ffb35c');

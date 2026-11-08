@@ -18,6 +18,7 @@
       <div id="rate">0 / sec</div>
       <div id="ready">✦ Supernova ready ✦</div>
       <div id="riftHud"></div>
+      <div id="dilHud"></div>
       <div id="pins" hidden></div>
     </div>
     <div id="combo"></div>
@@ -30,6 +31,7 @@
       <button data-t="up" class="on">Upgrades</button>
       <button data-t="nova" id="novaTab" hidden>Supernova</button>
       <button data-t="col" id="colTab" hidden>Collapse</button>
+      <button data-t="sing" id="singTab" hidden>Singularity</button>
       <button data-t="stats">Stats</button>
       <button id="mute" title="Toggle sound">♪ On</button>
     </div>
@@ -55,11 +57,25 @@
         <div class="bar"><i id="colBar" style="background:linear-gradient(90deg,#6b3cff,#c9a6ff)"></i></div>
         <button class="bigbtn" id="colBtn" style="background:linear-gradient(90deg,#6b3cff,#c9a6ff);color:#fff" disabled>Collapse</button>
       </div>
+      <div class="help" id="singTease" hidden></div>
       <div class="cat">Dark Matter upgrades</div>
       <div id="dmList" class="list"></div>
       <div class="cat" id="riftCat" hidden>Rifts</div>
       <div class="help" id="riftHelp" hidden>A Rift is a harder run with a twist. Entering one resets money and upgrades (Stardust is kept, and Supernova is blocked while inside). Reach the goal to seal it for a permanent reward. You can abandon a rift at any time.</div>
       <div id="riftList" class="list"></div>
+    </div>
+    <div id="pane-sing" class="pane" hidden>
+      <div class="novabox" style="background:linear-gradient(160deg,#2a160a,#120a06);border-color:#6b3d1c">
+        <div class="sd" style="color:#ffb35c"><span id="singCount">0</span> ◉ Singularity</div>
+        <p>Fall past the event horizon. Dark Matter, its upgrades and the Constellation reset; Rift seals and your records stay. After the first Singularity all orb value is <b style="color:#ffd9b0">dilated</b>: raised to a power below 1, until Event Horizon lifts it back. A <b style="color:#ffd9b0">black hole</b> sits in the field: orbs popped near it feed its mass, and a full meter sets off a flare that eases dilation for a while.</p>
+        <div id="singInfo" style="font-size:13px"></div>
+        <div class="bar"><i id="singBar" style="background:linear-gradient(90deg,#ff7a2e,#ffd9b0)"></i></div>
+        <button class="bigbtn" id="singBtn" style="background:linear-gradient(90deg,#ff7a2e,#ffd9b0);color:#1a0d05" disabled>Singularity</button>
+        <label class="toggle" id="autoColRow" hidden style="margin-top:10px"><input type="checkbox" id="autoCol"> Auto-Collapse when it would at least double your Dark Matter, or after 5 minutes</label>
+      </div>
+      <div class="cat">Singularity upgrades</div>
+      <div id="slList" class="list"></div>
+      <div class="help" id="beyond">Beyond the horizon: <b>???</b> Lift dilation all the way to ^1.00.</div>
     </div>
     <div id="pane-stats" class="pane" hidden>
       <div class="stats" id="statsBox"></div>

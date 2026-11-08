@@ -1,14 +1,17 @@
 import { onRefresh } from '../core/app';
 import { $, fmt, setClass, setHTML, setText } from '../core/util';
 import { DU, SU } from '../content/prestige';
+import { SL } from '../content/singularity';
 import { AUTO_NOVA_RIFT, RIFTS } from '../content/rifts';
 import { refreshPins } from './pins';
 import { STAT_ROWS, togglePin } from './statRows';
 import type { RiftDef } from '../content/types';
 import { exportSave, parseImport } from '../state/save';
 import { S } from '../state/state';
+import { stat } from '../systems/stats';
 import {
-  colGain, COLLAPSE_MIN, doCollapse, doNova, enterRift, importState, leaveRift, nextNovaAt, NOVA_MIN, novaGain, wipe,
+  colGain, COLLAPSE_MIN, collapseComplete, doCollapse, doNova, doSingularity, enterRift, importState, leaveRift, nextNovaAt,
+  NOVA_MIN, novaGain, SING_MIN_LOG, singGain, wipe,
 } from '../systems/prestige';
 import { currencyShop, refreshRunShop } from './shop';
 import { armed, toast } from './toast';
@@ -98,6 +101,15 @@ export function refreshCollapsePane(): void {
     g ? `Collapse now for <b style="color:#c9a6ff">+${fmt(g)} ◆</b>` : `${fmt(S.starsCycle)} / ${fmt(COLLAPSE_MIN)} Stardust earned since last Collapse`);
   $<HTMLButtonElement>('#colBtn').disabled = !g;
   refreshDarkShop();
+  // Teaser for layer 4 until the first Singularity
+  const tease = $('#singTease');
+  tease.hidden = !S.collapses || S.singularities > 0;
+  if (!tease.hidden) {
+    const maxed = DU.filter(u => S.dl[u.id] >= u.max).length, sealed = S.riftsDone.length;
+    setHTML(tease, collapseComplete()
+      ? '<b style="color:#ffb35c">◉ Something stirs at the centre of the field.</b> The Singularity tab is open.'
+      : `<b>???</b> Max every Dark Matter upgrade (${maxed} / ${DU.length}) and seal every Rift (${sealed} / ${RIFTS.length}).`);
+  }
   const showR = S.collapses > 0;
   $('#riftCat').hidden = !showR; $('#riftHelp').hidden = !showR; $('#riftList').hidden = !showR;
   for (const R of RIFTS) {
@@ -108,6 +120,46 @@ export function refreshCollapsePane(): void {
     r.btn.style.display = done ? 'none' : '';
     if (!r.btn.dataset.armed) setText(r.btn, act ? 'Abandon rift' : 'Enter rift');
   }
+}
+
+// ---------- Singularity pane (layer 4) ----------
+let refreshSingShop = (): void => {};
+
+export function buildSingPane(): void {
+  refreshSingShop = currencyShop({
+    box: $('#slList'), defs: SL, levels: () => S.sl,
+    balance: () => S.sing, spend: n => { S.sing -= n; },
+    cls: 'sgc', unit: '◉', sound: [180, .5, 720],
+    onBuy: () => refreshSingPane(),
+  });
+  const btn = $<HTMLButtonElement>('#singBtn');
+  btn.addEventListener('click', () => {
+    if (!singGain()) return;
+    if (!armed(btn, 'Click again: resets Dark Matter and the Constellation')) return;
+    doSingularity();
+  });
+  $<HTMLInputElement>('#autoCol').addEventListener('change', e => { S.autoCol = (e.target as HTMLInputElement).checked; });
+  onRefresh(refreshSingPane);
+}
+
+export function refreshSingPane(): void {
+  setText($('#singCount'), fmt(S.sing));
+  const g = singGain();
+  const lg = Math.log10(Math.max(1, S.cyclePeak));
+  $('#singBar').style.width = (g ? 100 : Math.min(100, lg / SING_MIN_LOG * 100)) + '%';
+  const info = $('#singInfo');
+  if (S.rift) setText(info, 'Singularity is blocked while you are inside a Rift.');
+  else if (!S.singularities && !collapseComplete()) setText(info, 'Max every Dark Matter upgrade and seal every Rift first.');
+  else if (g) setHTML(info, `Singularity now for <b style="color:#ffb35c">+${fmt(g)} ◉</b> (from your best run this cycle, $${fmt(S.cyclePeak)})`);
+  else setText(info, `Best run this cycle $${fmt(S.cyclePeak)} / $1e${SING_MIN_LOG}`);
+  $<HTMLButtonElement>('#singBtn').disabled = !g;
+  $('#autoColRow').hidden = !S.sl.autoCol;
+  $<HTMLInputElement>('#autoCol').checked = S.autoCol;
+  $('#beyond').hidden = !S.singularities;
+  if (!$('#beyond').hidden) setHTML($('#beyond'), stat.dilation >= 1
+    ? 'Beyond the horizon: <b>???</b> Dilation is gone. Something new is coming in a future update.'
+    : `Beyond the horizon: <b>???</b> Lift dilation all the way to ^1.00 (now ^${stat.dilation.toFixed(2)}).`);
+  refreshSingShop();
 }
 
 // ---------- Stats pane ----------

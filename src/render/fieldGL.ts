@@ -1,5 +1,6 @@
 import { clock } from '../core/app';
-import { BlastKind, world, WELL_GLOW } from '../sim/world';
+import { BlastKind, HOLE_CORE, HOLE_FEED, world, WELL_GLOW } from '../sim/world';
+import { stat } from '../systems/stats';
 import { field, glCv, size } from './canvas';
 import { colorOf, CRY, WHITE } from './sprites';
 
@@ -13,7 +14,7 @@ import { colorOf, CRY, WHITE } from './sprites';
  */
 
 // Instance kinds, matched in the shaders.
-const BLAST = 0, ORB = 2, SQUARE = 3, DIAMOND = 4, SEGMENT = 5, WELL = 6;
+const BLAST = 0, ORB = 2, SQUARE = 3, DIAMOND = 4, SEGMENT = 5, WELL = 6, HOLE = 7;
 
 /** Floats per instance: x, y, r, kind | r, g, b, a | p0, p1, p2, p3 */
 const STRIDE = 12;
@@ -96,6 +97,31 @@ void main() {
 const FS_WELL = FS_HEAD + `
 const float TAU = 6.2831853;
 void main() {
+  if (v_kind == 7.0) {
+    // black hole: params are rotation, mass fill, flare and line thickness
+    float d = length(v_lp), ang = atan(v_lp.y, v_lp.x);
+    float rot = v_p.x, mass = v_p.y, flare = v_p.z, th = v_p.w, core = ${HOLE_CORE.toFixed(1)};
+    // faint haze over the feeding zone
+    float haze = smoothstep(v_r, v_r * 0.5, d) * (0.10 + 0.14 * flare);
+    vec3 col = vec3(1.0, 0.55, 0.2) * haze; float al = haze;
+    // accretion disk: hot near the core, cooler outwards, three swirling arms
+    float t = clamp((d - core - 4.0) / 75.0, 0.0, 1.0);
+    float disk = (d > core && d < core + 80.0) ? (1.0 - t) * (0.5 + 0.5 * sin(ang * 3.0 - rot * 2.0 + d * 0.08)) : 0.0;
+    disk *= 0.5 + 0.5 * flare;
+    vec3 hot = mix(vec3(1.0, 0.95, 0.85), vec3(1.0, 0.45, 0.12), t);
+    col = hot * disk + col * (1.0 - disk); al = disk + al * (1.0 - disk);
+    // event horizon, then a thin photon ring around it
+    float hole = clamp((core - d) / (u_px * 1.5) + 0.5, 0.0, 1.0);
+    col *= 1.0 - hole; al = hole + al * (1.0 - hole);
+    float pr = stroke(d - core - 1.5, 2.0 * th) * (0.75 + 0.25 * flare);
+    col = vec3(1.0, 0.85, 0.6) * pr + col * (1.0 - pr); al = pr + al * (1.0 - pr);
+    // mass meter: a ring filling clockwise from the top
+    float a01 = mod(ang + 1.5707963, TAU) / TAU;
+    float m = stroke(d - (core + 104.0), 2.5 * th) * (a01 <= mass ? 0.9 : 0.14);
+    col = vec3(1.0, 0.7, 0.35) * m + col * (1.0 - m); al = m + al * (1.0 - m);
+    o = vec4(col, al);
+    return;
+  }
   float d = length(v_lp), t = d / v_r;
   vec4 g0 = vec4(0.0, 0.0, 0.0, 0.9), g1 = vec4(60.0 / 255.0, 30.0 / 255.0, 110.0 / 255.0, 0.35);
   vec4 g = t < 0.25 ? mix(g0, g1, t / 0.25) : mix(g1, vec4(g1.rgb, 0.0), clamp((t - 0.25) / 0.75, 0.0, 1.0));
@@ -221,7 +247,7 @@ function hsl(h: number, l: number): [number, number, number] {
 }
 
 // ---------- instance buffer ----------
-function put(x: number, y: number, r: number, kind: number, c: readonly number[], a: number, p0 = 0, p1 = 0, p2 = 0): void {
+function put(x: number, y: number, r: number, kind: number, c: readonly number[], a: number, p0 = 0, p1 = 0, p2 = 0, p3 = 0): void {
   if ((n + 1) * STRIDE > data.length) {
     const next = new Float32Array(data.length * 2);
     next.set(data);
@@ -230,7 +256,7 @@ function put(x: number, y: number, r: number, kind: number, c: readonly number[]
   const i = n++ * STRIDE;
   data[i] = x; data[i + 1] = y; data[i + 2] = r; data[i + 3] = kind;
   data[i + 4] = c[0]; data[i + 5] = c[1]; data[i + 6] = c[2]; data[i + 7] = a;
-  data[i + 8] = p0; data[i + 9] = p1; data[i + 10] = p2; data[i + 11] = 0;
+  data[i + 8] = p0; data[i + 9] = p1; data[i + 10] = p2; data[i + 11] = p3;
 }
 
 const NONE = [0, 0, 0] as const;
@@ -257,6 +283,10 @@ export function renderFieldGL(shakeX: number, shakeY: number): void {
   n = 0;
   // wells (drawn normally, first)
   for (const w of world.wells) put(w.x, w.y, WELL_GLOW, WELL, NONE, 1, w.a, thick);
+  if (stat.hole) {
+    // black hole (layer 4): params are rotation, mass fill 0..1, flare 0..1 and line thickness
+    put(field.W / 2, field.H / 2, HOLE_FEED, HOLE, NONE, 1, world.holeA, world.mass / stat.massCap, world.flareT > 0 ? 1 : 0, thick);
+  }
   const wellCount = n;
 
   // everything else adds light, like the 2D renderer's 'lighter'

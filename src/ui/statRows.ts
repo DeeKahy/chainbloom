@@ -35,6 +35,12 @@ export const STAT_ROWS: StatRow[] = [
   { id: 'fluxEver', label: 'Flux earned', value: () => fmt(S.fluxEver) },
   { id: 'fluxMult', label: 'Flux bonus', value: () => '×' + fmt(stat.fluxMult) },
   { id: 'rifts', label: 'Rifts sealed', value: () => `${S.riftsDone.length} / ${RIFTS.length}` },
+  { id: 'singularities', label: 'Singularities', value: () => String(S.singularities) },
+  { id: 'singEver', label: 'Singularity earned', value: () => fmt(S.singEver) },
+  { id: 'cyclePeak', label: 'Best run this cycle', value: () => '$' + fmt(S.cyclePeak) },
+  { id: 'dilation', label: 'Dilation', value: () => stat.hole ? '^' + Math.min(1, stat.dilation + (world.flareT > 0 ? stat.flareBonus : 0)).toFixed(2) : 'none' },
+  { id: 'mass', label: 'Black hole mass', value: () => stat.hole ? Math.floor(world.mass / stat.massCap * 100) + '%' : '-' },
+  { id: 'chainMem', label: 'Chain Memory', value: () => '×' + stat.chainMem.toFixed(2) + (S.sl.memory ? '' : ' (not bought)') },
   { id: 'playTime', label: 'Play time', value: () => Math.floor(S.playTime / 3600) + 'h ' + Math.floor(S.playTime / 60 % 60) + 'm' },
 ];
 

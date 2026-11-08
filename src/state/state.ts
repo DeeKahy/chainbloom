@@ -1,8 +1,9 @@
 import { DU, SU } from '../content/prestige';
 import type { NodeType } from '../content/types';
 import { UP } from '../content/upgrades';
+import { SL } from '../content/singularity';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export interface BoardNode {
   q: number;
@@ -42,6 +43,16 @@ export interface GameState {
   rift: number;
   riftsDone: number[];
   autoBuy: boolean;
+  // layer 4: singularity
+  sing: number;
+  singEver: number;
+  singularities: number;
+  sl: Record<string, number>;
+  /** Highest runEarned since the last Singularity (all time before the first). Sets the gain. */
+  cyclePeak: number;
+  autoCol: boolean;
+  /** Seconds since the last Collapse, for Auto-Collapse. */
+  colTime: number;
   // bookkeeping
   popped: number;
   best: number;
@@ -64,6 +75,7 @@ export function fresh(): GameState {
     stardust: 0, starsEver: 0, starsCycle: 0, st: levels(SU), novas: 0, autoNova: false,
     dm: 0, dmEver: 0, collapses: 0, dl: levels(DU), board: [], flux: 0, fluxEver: 0, pulseBank: 0,
     rift: 0, riftsDone: [], autoBuy: true,
+    sing: 0, singEver: 0, singularities: 0, sl: levels(SL), cyclePeak: 0, autoCol: false, colTime: 0,
     popped: 0, best: 0, saved: 0, lastRate: 0, mute: false, pinned: [], playTime: 0,
   };
 }
@@ -93,7 +105,7 @@ export function sanitizeState(): boolean {
   };
   const top = S as unknown as Record<string, unknown>;
   for (const k of Object.keys(top)) fix(top, k);
-  for (const m of [S.lv, S.st, S.dl]) for (const k of Object.keys(m)) fix(m, k);
+  for (const m of [S.lv, S.st, S.dl, S.sl]) for (const k of Object.keys(m)) fix(m, k);
   for (const n of S.board) fix(n as unknown as Record<string, unknown>, 'c');
   return ok;
 }

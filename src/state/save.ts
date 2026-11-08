@@ -19,6 +19,11 @@ const MIGRATIONS: ((d: RawSave) => void)[] = [
   d => {
     if (!Array.isArray(d.pinned)) d.pinned = [];
   },
+  // 3 → 4: layer 4 (Singularity). Before the first one, the "cycle" is the whole game so far,
+  // so the gain starts from all money ever earned.
+  d => {
+    if (d.cyclePeak === undefined) d.cyclePeak = typeof d.total === 'number' ? d.total : 0;
+  },
 ];
 
 /** Turn any parsed save object into a complete, current GameState. */
@@ -34,6 +39,7 @@ export function normalize(raw: unknown): GameState {
   out.lv = Object.assign(fresh().lv, d.lv);
   out.st = Object.assign(fresh().st, d.st);
   out.dl = Object.assign(fresh().dl, d.dl);
+  out.sl = Object.assign(fresh().sl, d.sl);
   out.version = SAVE_VERSION;
   return out;
 }

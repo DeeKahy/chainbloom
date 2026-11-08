@@ -1,4 +1,5 @@
 import { riftById } from '../content/rifts';
+import { chainMemoryMult, DILATION_BASE, DILATION_STEP } from '../content/singularity';
 import { S } from '../state/state';
 
 /** Derived numbers, recomputed from the save by recalc(). Never saved. */
@@ -29,6 +30,18 @@ export interface Stats {
   cryCap: number;
   cryVal: number;
   fission: number;
+  /** Exponent applied to orb value after the first Singularity (1 = no dilation). Flares add flareBonus. */
+  dilation: number;
+  flareBonus: number;
+  flareDur: number;
+  /** Mass per orb popped near the black hole, and mass needed for a flare. */
+  massGain: number;
+  massCap: number;
+  /** Chain Memory multiplier on Singularity gain (1 until bought). */
+  chainMem: number;
+  singMult: number;
+  /** The black hole exists from the first Singularity on. */
+  hole: boolean;
   /** Seconds before an orb decays; Infinity outside the Entropy Rift. */
   orbLifetime: number;
 }
@@ -62,6 +75,16 @@ export function recalc(): void {
   stat.cryVal = 2 + l.cryVal;
   stat.fission = .08 * s.crit;
   stat.orbLifetime = Infinity;
+
+  const g = S.sl;
+  stat.hole = S.singularities > 0;
+  stat.dilation = stat.hole ? Math.min(1, DILATION_BASE + DILATION_STEP * g.horizon) : 1;
+  stat.flareBonus = .1 + .02 * g.corona;
+  stat.flareDur = 20 + 5 * g.flare;
+  stat.massGain = 1.5 ** g.accrete;
+  stat.massCap = 600;
+  stat.chainMem = chainMemoryMult(S.best);
+  stat.singMult = (g.memory ? stat.chainMem : 1) * 1.4 ** g.hawking;
 
   const rift = S.rift ? riftById(S.rift) : undefined;
   if (rift) {

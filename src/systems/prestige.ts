@@ -1,8 +1,8 @@
 import { initAudio, tone } from '../audio';
 import { refreshAll } from '../core/app';
 import { fmt } from '../core/util';
-import { memoryStardust, seedMoney, SU } from '../content/prestige';
-import { riftById } from '../content/rifts';
+import { DU, memoryStardust, seedMoney, SU } from '../content/prestige';
+import { riftById, RIFTS } from '../content/rifts';
 import type { RiftDef } from '../content/types';
 import { UP } from '../content/upgrades';
 import { field } from '../render/canvas';
@@ -35,6 +35,22 @@ function resetStardustLayer(): void {
   resetRunLayer(); // after SU reset, so Seed Fund is 0 and money starts at 0
 }
 
+/** Singularity: Dark Matter, its upgrades and the Constellation go. Rift seals, records and settings stay. */
+function resetDarkLayer(): void {
+  for (const u of DU) S.dl[u.id] = 0;
+  S.dm = 0;
+  if (S.sl.keepBoard) for (const n of S.board) n.c = 0; // Star Chart: layout kept, nothing to refund
+  else S.board = [];
+  rebuildBoardMap();
+  clearBoardFx();
+  S.flux = 0; S.fluxEver = 0; S.pulseBank = 0;
+  S.rift = 0;
+  S.colTime = 0;
+  S.cyclePeak = 0;
+  world.mass = 0; world.flareT = 0;
+  resetStardustLayer(); // after the DU reset, so Nebula Memory gives no Stardust
+}
+
 // ---------- gains ----------
 export const NOVA_MIN = 1e6;
 export const COLLAPSE_MIN = 1000;
@@ -47,6 +63,24 @@ export const nextNovaAt = (gain: number): number => ((gain + 1) / stat.starMult)
 
 export const colGain = (): number =>
   (S.rift || S.starsCycle < COLLAPSE_MIN) ? 0 : Math.floor(2 * (S.starsCycle / COLLAPSE_MIN) ** .6);
+
+/** The first Singularity needs every Dark Matter upgrade maxed and every Rift sealed. */
+export const collapseComplete = (): boolean =>
+  DU.every(u => S.dl[u.id] >= u.max) && RIFTS.every(r => S.riftsDone.includes(r.id));
+
+/** Money (as a power of ten) the cycle must peak at before a Singularity gives anything. */
+export const SING_MIN_LOG = 30;
+
+/**
+ * Singularity points from the highest money of this cycle, on a log scale: 1 at 1e30, ~10 at 1e77,
+ * ~60 at 1e154. Times Chain Memory and Hawking Radiation.
+ */
+export function singGain(): number {
+  if (S.rift || (!S.singularities && !collapseComplete())) return 0;
+  const lg = Math.log10(Math.max(1, S.cyclePeak));
+  if (lg < SING_MIN_LOG) return 0;
+  return Math.floor((lg / SING_MIN_LOG) ** 2.5 * stat.singMult);
+}
 
 // ---------- Supernova (layer 2) ----------
 export function doNova(auto: boolean): void {
@@ -79,21 +113,57 @@ export function maybeAutoNova(): void {
 }
 
 // ---------- Collapse (layer 3) ----------
-export function doCollapse(): void {
+export function doCollapse(auto = false): void {
   const g = colGain();
   if (!g) return;
   const first = !S.collapses;
-  for (const o of world.orbs) burst(o.x, o.y, '#b98bff', 4, 300, 1.4);
+  for (const o of world.orbs) burst(o.x, o.y, '#b98bff', auto ? 2 : 4, 300, 1.4);
   S.dm += g; S.dmEver += g; S.collapses++;
+  S.colTime = 0;
   resetStardustLayer();
   recalc();
-  screenFlash('110,50,200', 1);
-  world.shake = 14;
-  initAudio(); tone(400, 2, .18, 'sawtooth', 40); tone(60, 2, .15, 'sine', 30);
+  screenFlash('110,50,200', auto ? .4 : 1);
+  world.shake = auto ? 5 : 14;
+  initAudio();
+  if (auto) tone(300, 1, .08, 'sawtooth', 60);
+  else { tone(400, 2, .18, 'sawtooth', 40); tone(60, 2, .15, 'sine', 30); }
   toast(`Collapse! +${fmt(g)} ◆ Dark Matter`, '#c9a6ff');
   if (first) setTimeout(() => toast('The Constellation is open. Switch views at the top left.', '#c9a6ff'), 1200);
   refreshAll();
   save(autoRateAvg());
+}
+
+/** Auto-Collapse (Singularity upgrade): when it would at least double Dark Matter, or after 5 minutes. */
+export function maybeAutoCollapse(): void {
+  if (!S.sl.autoCol || !S.autoCol) return;
+  const g = colGain();
+  if (g && (g >= Math.max(1, S.dm) || S.colTime > 300)) doCollapse(true);
+}
+
+// ---------- Singularity (layer 4) ----------
+export function doSingularity(): void {
+  const g = singGain();
+  if (!g) return;
+  const first = !S.singularities;
+  const { W, H } = field;
+  for (const o of world.orbs) burst(o.x, o.y, '#ffb35c', 5, 500, 1.8);
+  resetDarkLayer();
+  S.sing += g; S.singEver += g; S.singularities++;
+  recalc();
+  for (let i = 0; i < 8; i++) addBlast(W / 2, H / 2, Math.max(W, H) * (.15 + i * .12), 99, null, BlastKind.Volatile);
+  screenFlash('255,190,120', 1);
+  world.shake = 18;
+  initAudio(); tone(50, 3, .2, 'sawtooth', 20); tone(880, 2.5, .08, 'sine', 55); tone(220, 2, .1, 'triangle', 1760);
+  toast(`Singularity! +${fmt(g)} ◉`, '#ffb35c');
+  if (first) setTimeout(() => toast('A black hole sits at the centre now. Pop orbs near it to fill its mass, then chain hard during the flare.', '#ffb35c'), 1400);
+  refreshAll();
+  save(autoRateAvg());
+}
+
+/** Called every UI tick: track the cycle's peak (the Singularity gain) and run Auto-Collapse. */
+export function tickPrestige(): void {
+  if (S.runEarned > S.cyclePeak) S.cyclePeak = S.runEarned;
+  maybeAutoCollapse();
 }
 
 // ---------- Rifts ----------
