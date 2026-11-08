@@ -3,7 +3,7 @@ import { refreshAll } from '../core/app';
 import { fmt } from '../core/util';
 import { DU, memoryStardust, seedMoney, SU } from '../content/prestige';
 import { riftById, RIFTS } from '../content/rifts';
-import type { RiftDef } from '../content/types';
+import type { RiftDef, UpgradeDef } from '../content/types';
 import { UP } from '../content/upgrades';
 import { field } from '../render/canvas';
 import { colorOf } from '../render/sprites';
@@ -82,6 +82,16 @@ export function singGain(): number {
   return Math.floor((lg / SING_MIN_LOG) ** 2.5 * stat.singMult);
 }
 
+/**
+ * Currency spent on a shop's current levels. The auto-prestiges compare a gain with what you hold
+ * plus this: with an autobuyer spending everything, "held" alone is ~0 and they would fire at once.
+ */
+function spentOn(defs: UpgradeDef[], levels: Record<string, number>): number {
+  let sum = 0;
+  for (const u of defs) for (let i = 0; i < levels[u.id]; i++) sum += Math.ceil(u.base * u.g ** i);
+  return sum;
+}
+
 // ---------- Supernova (layer 2) ----------
 export function doNova(auto: boolean): void {
   const g = novaGain();
@@ -105,11 +115,11 @@ export function doNova(auto: boolean): void {
   save(autoRateAvg());
 }
 
-/** Auto-Supernova: fire when it would at least double Stardust, or after 2 minutes in the run. */
+/** Auto-Supernova: fire when it would at least double Stardust (held + spent on upgrades), or after 2 minutes in the run. */
 export function maybeAutoNova(): void {
   if (!S.autoNova || !S.riftsDone.includes(4)) return;
   const g = novaGain();
-  if (g && (g >= Math.max(1, S.stardust) || S.runTime > 120)) doNova(true);
+  if (g && (g >= Math.max(1, S.stardust + spentOn(SU, S.st)) || S.runTime > 120)) doNova(true);
 }
 
 // ---------- Collapse (layer 3) ----------
@@ -133,11 +143,11 @@ export function doCollapse(auto = false): void {
   save(autoRateAvg());
 }
 
-/** Auto-Collapse (Singularity upgrade): when it would at least double Dark Matter, or after 5 minutes. */
+/** Auto-Collapse (Singularity upgrade): when it would at least double Dark Matter (held + spent), or after 5 minutes. */
 export function maybeAutoCollapse(): void {
   if (!S.sl.autoCol || !S.autoCol) return;
   const g = colGain();
-  if (g && (g >= Math.max(1, S.dm) || S.colTime > 300)) doCollapse(true);
+  if (g && (g >= Math.max(1, S.dm + spentOn(DU, S.dl)) || S.colTime > 300)) doCollapse(true);
 }
 
 // ---------- Singularity (layer 4) ----------

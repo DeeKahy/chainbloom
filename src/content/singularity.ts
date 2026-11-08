@@ -38,7 +38,7 @@ export const SL: UpgradeDef[] = [
   { id: 'autoStar', name: 'Stardust Autobuyer', base: 12, g: 1, max: 1,
     desc: () => 'Automatically buys the cheapest Stardust upgrade you can afford. Toggle it in the Supernova tab.' },
   { id: 'autoCol', name: 'Auto-Collapse', base: 15, g: 1, max: 1,
-    desc: () => 'Collapses for you when it would at least double your Dark Matter, or after 5 minutes. Toggle it in the Collapse tab.' },
+    desc: () => 'Collapses for you when it would at least double your Dark Matter (held plus spent on upgrades), or after 5 minutes. Toggle it in the Collapse tab.' },
   { id: 'keepBoard', name: 'Star Chart', base: 20, g: 1, max: 1,
     desc: () => 'Your Constellation layout survives a Singularity (the nodes are kept, their Flux is not refunded).' },
 ];
