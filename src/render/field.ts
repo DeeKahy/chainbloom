@@ -5,6 +5,7 @@ import { S } from '../state/state';
 import { stat } from '../systems/stats';
 import { ctx, field, size } from './canvas';
 import { colorOf, CRY, WHITE } from './sprites';
+import { renderFieldGL } from './fieldGL';
 
 const FONT = 'ui-sans-serif,system-ui,sans-serif';
 
@@ -21,7 +22,7 @@ export function drawFlash(): void {
 
 /** Draws in world units (the simulation's coordinates) under one scale transform. */
 export function renderField(): void {
-  const { W, H, scale } = field, T = clock.T;
+  const { scale } = field, T = clock.T;
   // Lines and dots are thickened when the field is scaled down, so they don't vanish on a phone.
   const thick = Math.max(1, .7 / scale);
   const minOrb = MIN_ORB_PX / scale;
@@ -102,14 +103,52 @@ export function renderField(): void {
   ctx.globalAlpha = 1;
   ctx.restore();
 
-  // Drones and texts are drawn in screen pixels at world positions, so they stay readable.
+  drawFieldOverlay();
+  ctx.restore();
+
+  drawFlash();
+}
+
+/** WebGL path: the field is drawn on the GL canvas, and only drones, texts and the flash on the 2D canvas above it. */
+export function renderFieldWithGL(): void {
+  const sx = world.shake > .1 ? (Math.random() - .5) * world.shake : 0;
+  const sy = world.shake > .1 ? (Math.random() - .5) * world.shake : 0;
+  renderFieldGL(sx, sy);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.clearRect(0, 0, size.W, size.H);
+  ctx.save();
+  ctx.translate(sx, sy);
+  drawFieldOverlay();
+  ctx.restore();
+  drawFlash();
+}
+
+/** Drones used shadowBlur every frame, which Firefox renders very slowly; draw the glowing drone once and stamp it. */
+const DRONE_HALF = 24;
+let droneImg: HTMLCanvasElement | null = null, droneDPR = 0;
+
+function droneSprite(): HTMLCanvasElement {
+  if (droneImg && droneDPR === size.DPR) return droneImg;
+  droneDPR = size.DPR;
+  droneImg = document.createElement('canvas');
+  droneImg.width = droneImg.height = DRONE_HALF * 2 * droneDPR;
+  const c = droneImg.getContext('2d')!;
+  c.setTransform(droneDPR, 0, 0, droneDPR, DRONE_HALF * droneDPR, DRONE_HALF * droneDPR);
+  c.fillStyle = '#ffd34d'; c.shadowColor = '#ffd34d'; c.shadowBlur = 10 * droneDPR;
+  c.beginPath(); c.moveTo(9, 0); c.lineTo(-6, -6); c.lineTo(-3, 0); c.lineTo(-6, 6); c.fill();
+  return droneImg;
+}
+
+/** Drones, payout texts and the first-run hint, in screen pixels at world positions so they stay readable. */
+function drawFieldOverlay(): void {
+  const { W, H, scale } = field, T = clock.T;
   ctx.globalCompositeOperation = 'source-over';
   for (const d of world.drones) {
     const ready = 1 - Math.max(0, d.t) / stat.interval;
     const x = d.x * scale, y = d.y * scale;
     ctx.save(); ctx.translate(x, y); ctx.rotate(Math.atan2(H / 2 - d.y, W / 2 - d.x));
-    ctx.fillStyle = '#ffd34d'; ctx.shadowColor = '#ffd34d'; ctx.shadowBlur = 10;
-    ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(-6, -6); ctx.lineTo(-3, 0); ctx.lineTo(-6, 6); ctx.fill();
+    ctx.drawImage(droneSprite(), -DRONE_HALF, -DRONE_HALF, DRONE_HALF * 2, DRONE_HALF * 2);
     ctx.restore();
     ctx.strokeStyle = 'rgba(255,211,77,.5)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(x, y, 13, -Math.PI / 2, -Math.PI / 2 + ready * TAU); ctx.stroke();
@@ -130,7 +169,4 @@ export function renderField(): void {
     ctx.font = `600 16px ${FONT}`;
     ctx.fillText('Click to detonate', size.W / 2, size.H / 2 + 40);
   }
-  ctx.restore();
-
-  drawFlash();
 }

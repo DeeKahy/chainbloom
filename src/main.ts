@@ -4,9 +4,11 @@ import { $, fmt } from './core/util';
 import { bindInput } from './input';
 import { renderBoard } from './render/board';
 import { resize } from './render/canvas';
-import { renderField } from './render/field';
+import { gfx, glCv, clearCanvas } from './render/canvas';
+import { renderField, renderFieldWithGL } from './render/field';
+import { initFieldGL } from './render/fieldGL';
 import { rebuildBoardMap, updateBoard } from './sim/board';
-import { spawnOrb, updateField } from './sim/world';
+import { spawnOrb, updateField, world } from './sim/world';
 import { load, save } from './state/save';
 import { S } from './state/state';
 import { autoBuy, autoRateAvg } from './systems/economy';
@@ -22,6 +24,13 @@ import { toast } from './ui/toast';
 // ---------- boot ----------
 load();
 recalc();
+gfx.gl = initFieldGL(() => {
+  // GPU context lost (driver reset, memory pressure): carry on with the 2D renderer.
+  gfx.gl = false;
+  glCv.style.display = 'none';
+  clearCanvas();
+});
+if (!gfx.gl) glCv.style.display = 'none';
 resize();
 new ResizeObserver(resize).observe($('#stage'));
 
@@ -47,12 +56,13 @@ const SAVE_INTERVAL = 5;
 let last = performance.now(), uiT = 0, saveT = 0;
 
 function frame(now: number): void {
+  if (debug.paused) { last = now; requestAnimationFrame(frame); return; }
   const dt = Math.min(.05, (now - last) / 1000);
   last = now;
 
   updateField(dt);
   updateBoard(dt);
-  if (app.view === 'board') renderBoard(); else renderField();
+  if (app.view === 'board') renderBoard(); else if (gfx.gl) renderFieldWithGL(); else renderField();
   frameHud(dt);
 
   uiT += dt; saveT += dt;
@@ -72,6 +82,7 @@ window.addEventListener('beforeunload', () => save(autoRateAvg()));
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(autoRateAvg()); });
 
 // Debug handle for the browser console.
-(window as unknown as Record<string, unknown>).__cb = { S, recalc };
+const debug = { S, recalc, world, gfx, clearCanvas, renderField, renderFieldWithGL, /** Freeze the loop (for comparing renderers). */ paused: false };
+(window as unknown as Record<string, unknown>).__cb = debug;
 
 requestAnimationFrame(frame);

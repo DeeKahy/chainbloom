@@ -1,5 +1,5 @@
 import { initAudio, tone } from '../audio';
-import { fmt, replayClass } from '../core/util';
+import { fmt, replayClass, setClass, setHTML, setText } from '../core/util';
 import type { RunUpgradeDef, UpgradeDef } from '../content/types';
 import { UP } from '../content/upgrades';
 import { S } from '../state/state';
@@ -17,8 +17,8 @@ interface Card {
 
 function makeCard(cls: string, onClick: (el: HTMLButtonElement) => void): Card {
   const el = document.createElement('button');
-  el.className = cls;
-  el.innerHTML = '<div class="row"><span class="nm"></span><span class="lv"></span></div><div class="ds"></div><div class="cost"></div>';
+  setClass(el, cls);
+  setHTML(el, '<div class="row"><span class="nm"></span><span class="lv"></span></div><div class="ds"></div><div class="cost"></div>');
   el.addEventListener('click', () => onClick(el));
   const q = (s: string) => el.querySelector<HTMLElement>(s)!;
   return { el, nm: q('.nm'), lv: q('.lv'), ds: q('.ds'), cost: q('.cost') };
@@ -42,7 +42,7 @@ export interface CurrencyShopOptions {
 
 /** Builds the cards once and returns a refresh function. Cost of level l is ceil(base * g^l). */
 export function currencyShop(o: CurrencyShopOptions): () => void {
-  o.box.innerHTML = '';
+  setHTML(o.box, '');
   const cards = new Map<string, Card>();
   for (const u of o.defs) {
     const card = makeCard('up ' + o.cls, el => {
@@ -66,18 +66,18 @@ export function currencyShop(o: CurrencyShopOptions): () => void {
     for (const u of o.defs) {
       const c = cards.get(u.id)!, l = lv[u.id];
       const single = u.max === 1;
-      c.nm.textContent = u.name;
-      c.lv.textContent = single ? '' : `Lv ${l}${u.max < 100 ? '/' + u.max : ''}`;
+      setText(c.nm, u.name);
+      setText(c.lv, single ? '' : `Lv ${l}${u.max < 100 ? '/' + u.max : ''}`);
       if (l >= u.max) {
-        c.el.className = `up ${o.cls} maxed`;
-        c.ds.textContent = single ? u.desc(0, 1, stat) : 'Maxed';
-        c.cost.textContent = single ? 'OWNED' : 'MAX';
+        setClass(c.el, `up ${o.cls} maxed`);
+        setText(c.ds, single ? u.desc(0, 1, stat) : 'Maxed');
+        setText(c.cost, single ? 'OWNED' : 'MAX');
         continue;
       }
       const cost = Math.ceil(u.base * u.g ** l);
-      c.el.className = `up ${o.cls}` + (bal >= cost ? ' afford' : '');
-      c.ds.textContent = u.desc(l, l + 1, stat);
-      c.cost.textContent = `${fmt(cost)} ${o.unit}`;
+      setClass(c.el, `up ${o.cls}` + (bal >= cost ? ' afford' : ''));
+      setText(c.ds, u.desc(l, l + 1, stat));
+      setText(c.cost, `${fmt(cost)} ${o.unit}`);
     }
   };
 }
@@ -89,14 +89,14 @@ let paneUp: HTMLElement;
 
 export function buildRunShop(pane: HTMLElement, onBuy: () => void): void {
   paneUp = pane;
-  pane.innerHTML = '';
+  setHTML(pane, '');
   let cat: string | null = null;
   for (const u of UP) {
     if (u.cat !== cat) {
       cat = u.cat;
       const h = document.createElement('div');
-      h.className = 'cat';
-      h.textContent = cat;
+      setClass(h, 'cat');
+      setText(h, cat);
       h.dataset.cat = cat;
       pane.appendChild(h);
     }
@@ -132,27 +132,27 @@ export function refreshRunShop(): void {
       if (!teaserShown) {
         teaserShown = true;
         c.el.style.display = '';
-        c.el.className = 'up teaser';
-        c.nm.textContent = '???'; c.lv.textContent = ''; c.ds.textContent = u.hint || 'Keep going'; c.cost.textContent = '';
+        setClass(c.el, 'up teaser');
+        setText(c.nm, '???'); setText(c.lv, ''); setText(c.ds, u.hint || 'Keep going'); setText(c.cost, '');
         catsVisible[u.cat] = true;
       } else c.el.style.display = 'none';
       continue;
     }
     catsVisible[u.cat] = true;
     c.el.style.display = '';
-    c.nm.textContent = u.name;
-    c.lv.textContent = u.max < 100 ? `Lv ${l}/${u.max}` : `Lv ${l}`;
+    setText(c.nm, u.name);
+    setText(c.lv, u.max < 100 ? `Lv ${l}/${u.max}` : `Lv ${l}`);
     if (l >= u.max) {
-      c.el.className = 'up maxed';
-      c.ds.textContent = maxedText(u, l);
-      c.cost.textContent = 'MAX';
+      setClass(c.el, 'up maxed');
+      setText(c.ds, maxedText(u, l));
+      setText(c.cost, 'MAX');
       continue;
     }
     const [n, cost] = costFor(u, l, S.money);
     const afford = S.money >= cost;
-    c.el.className = 'up' + (afford ? ' afford' : '') + (c.el.classList.contains('flash') ? ' flash' : '');
-    c.ds.textContent = u.desc(l, l + n, stat);
-    c.cost.textContent = '$' + fmt(cost) + (n > 1 ? `  (×${n})` : '');
+    setClass(c.el, 'up' + (afford ? ' afford' : '') + (c.el.classList.contains('flash') ? ' flash' : ''));
+    setText(c.ds, u.desc(l, l + n, stat));
+    setText(c.cost, '$' + fmt(cost) + (n > 1 ? `  (×${n})` : ''));
   }
   paneUp.querySelectorAll<HTMLElement>('.cat').forEach(h => { h.style.display = catsVisible[h.dataset.cat!] ? '' : 'none'; });
 }

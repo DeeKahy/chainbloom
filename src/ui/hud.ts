@@ -1,5 +1,5 @@
 import { app, onRefresh, type BuyAmount, type Tab } from '../core/app';
-import { $, $$, fmt, replayClass } from '../core/util';
+import { $, $$, fmt, replayClass, setText } from '../core/util';
 import { riftById } from '../content/rifts';
 import { hooks } from '../sim/world';
 import { S } from '../state/state';
@@ -22,7 +22,7 @@ let dispMoney = 0;
 /** Big "N CHAIN" banner for long chains. */
 hooks.banner = count => {
   const c = el.combo;
-  c.textContent = count + ' CHAIN';
+  setText(c, count + ' CHAIN');
   c.style.color = count >= 200 ? '#ffd34d' : count >= 60 ? '#ff7ab8' : count >= 30 ? '#b98bff' : '#6ee7ff';
   c.style.textShadow = `0 0 30px ${c.style.color}`;
   replayClass(c, 'go');
@@ -71,16 +71,16 @@ export function refreshVisibleTab(): void {
 export function frameHud(dt: number): void {
   dispMoney += (S.money - dispMoney) * Math.min(1, dt * 10);
   if (Math.abs(S.money - dispMoney) < .5) dispMoney = S.money;
-  el.money.textContent = '$' + fmt(dispMoney);
+  setText(el.money, '$' + fmt(dispMoney));
 }
 
 /** ~8×/sec: text, unlock reveals and the visible pane. */
 export function tickHud(): void {
-  el.rate.textContent = '$' + fmt(rateAvg()) + ' / sec';
+  setText(el.rate, '$' + fmt(rateAvg()) + ' / sec');
   refreshPins();
   el.autoBuyRow.hidden = !S.dl.auto;
   const R = S.rift ? riftById(S.rift) : undefined;
-  el.riftHud.textContent = R ? `${R.name} · $${fmt(S.runEarned)} / $${fmt(R.goal)}` : '';
+  setText(el.riftHud, R ? `${R.name} · $${fmt(S.runEarned)} / $${fmt(R.goal)}` : '');
   refreshVisibleTab();
   if (app.view === 'board') refreshPalette();
 
@@ -96,7 +96,7 @@ export function tickHud(): void {
   el.viewBtns.hidden = !S.collapses;
 
   const cg = colGain() > 0;
-  el.ready.textContent = cg ? '◆ Collapse ready ◆' : '✦ Supernova ready ✦';
+  setText(el.ready, cg ? '◆ Collapse ready ◆' : '✦ Supernova ready ✦');
   el.ready.style.color = cg ? '#c9a6ff' : '';
   el.ready.classList.toggle('on', cg || novaGain() > 0);
 }

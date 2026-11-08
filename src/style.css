@@ -7,6 +7,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 #app{display:flex;height:100vh;height:100dvh}
 #stage{position:relative;flex:1;min-width:0;background:var(--bg)}
 canvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
+#stage canvas{position:absolute;inset:0}
+#gl{pointer-events:none}
 #hud{position:absolute;top:14px;left:0;right:0;text-align:center;pointer-events:none;user-select:none}
 #money{font-size:46px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums;text-shadow:0 0 28px rgba(110,231,255,.35)}
 #rate{color:var(--dim);font-size:14px;margin-top:2px;font-variant-numeric:tabular-nums}

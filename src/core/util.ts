@@ -31,3 +31,22 @@ export function replayClass(el: HTMLElement, cls: string): void {
   void el.offsetWidth;
   el.classList.add(cls);
 }
+
+// The HUD and panes refresh ~8×/sec. Writing the same text or class again still makes the browser
+// redo style and layout for the side panel, which is slow on phones, so writes go through these.
+const htmlCache = new WeakMap<HTMLElement, string>();
+
+export function setText(el: HTMLElement, s: string): void {
+  htmlCache.delete(el);
+  if (el.textContent !== s) el.textContent = s;
+}
+
+export function setHTML(el: HTMLElement, s: string): void {
+  if (htmlCache.get(el) === s) return;
+  htmlCache.set(el, s);
+  el.innerHTML = s;
+}
+
+export function setClass(el: HTMLElement, s: string): void {
+  if (el.className !== s) el.className = s;
+}

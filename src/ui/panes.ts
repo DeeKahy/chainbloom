@@ -1,5 +1,5 @@
 import { onRefresh } from '../core/app';
-import { $, fmt } from '../core/util';
+import { $, fmt, setClass, setHTML, setText } from '../core/util';
 import { DU, SU } from '../content/prestige';
 import { AUTO_NOVA_RIFT, RIFTS } from '../content/rifts';
 import { refreshPins } from './pins';
@@ -34,16 +34,16 @@ export function buildNovaPane(): void {
 }
 
 export function refreshNovaPane(): void {
-  $('#sdCount').textContent = fmt(S.stardust);
+  setText($('#sdCount'), fmt(S.stardust));
   const g = novaGain();
   const pct = Math.min(1, S.runEarned / NOVA_MIN);
   $('#novaBar').style.width = (g ? 100 : pct * 100) + '%';
   $('#autoNovaRow').hidden = !S.riftsDone.includes(AUTO_NOVA_RIFT);
   $<HTMLInputElement>('#autoNova').checked = S.autoNova;
   const info = $('#novaInfo');
-  if (S.rift) info.textContent = 'Supernova is blocked while you are inside a Rift.';
-  else if (g) info.innerHTML = `Supernova now for <b style="color:var(--gold)">+${fmt(g)} ✦</b> · next ✦ at $${fmt(nextNovaAt(g))}`;
-  else info.textContent = `$${fmt(S.runEarned)} / $1M earned this run`;
+  if (S.rift) setText(info, 'Supernova is blocked while you are inside a Rift.');
+  else if (g) setHTML(info, `Supernova now for <b style="color:var(--gold)">+${fmt(g)} ✦</b> · next ✦ at $${fmt(nextNovaAt(g))}`);
+  else setText(info, `$${fmt(S.runEarned)} / $1M earned this run`);
   $<HTMLButtonElement>('#novaBtn').disabled = !g;
   refreshStarShop();
 }
@@ -69,10 +69,10 @@ export function buildCollapsePane(): void {
     onBuy: () => refreshCollapsePane(),
   });
   const rl = $('#riftList');
-  rl.innerHTML = '';
+  setHTML(rl, '');
   for (const R of RIFTS) {
     const d = document.createElement('div');
-    d.className = 'up rift';
+    setClass(d, 'up rift');
     d.innerHTML = `<div class="row"><span class="nm">${R.name}</span><span class="lv"></span></div>
       <div class="ds">${R.rule}<br>Goal: earn $${fmt(R.goal)} in the rift. Reward: <b style="color:#e3d4ff">${R.reward}</b></div>
       <button class="rbtn"></button>`;
@@ -91,11 +91,11 @@ export function buildCollapsePane(): void {
 }
 
 export function refreshCollapsePane(): void {
-  $('#dmCount').textContent = fmt(S.dm);
+  setText($('#dmCount'), fmt(S.dm));
   const g = colGain();
   $('#colBar').style.width = Math.min(100, S.starsCycle / COLLAPSE_MIN * 100) + '%';
-  $('#colInfo').innerHTML = S.rift ? 'Collapse is blocked while you are inside a Rift.' :
-    g ? `Collapse now for <b style="color:#c9a6ff">+${fmt(g)} ◆</b>` : `${fmt(S.starsCycle)} / ${fmt(COLLAPSE_MIN)} Stardust earned since last Collapse`;
+  setHTML($('#colInfo'), S.rift ? 'Collapse is blocked while you are inside a Rift.' :
+    g ? `Collapse now for <b style="color:#c9a6ff">+${fmt(g)} ◆</b>` : `${fmt(S.starsCycle)} / ${fmt(COLLAPSE_MIN)} Stardust earned since last Collapse`);
   $<HTMLButtonElement>('#colBtn').disabled = !g;
   refreshDarkShop();
   const showR = S.collapses > 0;
@@ -103,10 +103,10 @@ export function refreshCollapsePane(): void {
   for (const R of RIFTS) {
     const r = riftEls.get(R.id)!;
     const done = S.riftsDone.includes(R.id), act = S.rift === R.id;
-    r.el.className = 'up rift' + (done ? ' done' : '') + (act ? ' active' : '');
-    r.lv.textContent = done ? 'Sealed ✓' : act ? `$${fmt(S.runEarned)} / $${fmt(R.goal)}` : '';
+    setClass(r.el, 'up rift' + (done ? ' done' : '') + (act ? ' active' : ''));
+    setText(r.lv, done ? 'Sealed ✓' : act ? `$${fmt(S.runEarned)} / $${fmt(R.goal)}` : '');
     r.btn.style.display = done ? 'none' : '';
-    if (!r.btn.dataset.armed) r.btn.textContent = act ? 'Abandon rift' : 'Enter rift';
+    if (!r.btn.dataset.armed) setText(r.btn, act ? 'Abandon rift' : 'Enter rift');
   }
 }
 
@@ -159,7 +159,7 @@ export function refreshStatsPane(): void {
       const name = document.createElement('span'), val = document.createElement('span');
       name.className = val.className = 'srow';
       name.dataset.id = val.dataset.id = r.id;
-      name.textContent = r.label;
+      setText(name, r.label);
       box.append(name, val);
       statEls.set(r.id, { name, val });
     }
@@ -168,6 +168,6 @@ export function refreshStatsPane(): void {
     const e = statEls.get(r.id)!, on = S.pinned.includes(r.id);
     e.name.classList.toggle('on', on);
     e.val.classList.toggle('on', on);
-    e.val.textContent = r.value();
+    setText(e.val, r.value());
   }
 }
