@@ -33,7 +33,9 @@ function selectTab(t: Tab): void {
   app.tab = t;
   $$('#tabs button[data-t]').forEach(x => x.classList.toggle('on', x.dataset.t === t));
   $$('.pane').forEach(p => { p.hidden = p.id !== 'pane-' + t; });
-  el.buyamt.style.visibility = t === 'up' ? '' : 'hidden';
+  // Buy ×1 / ×10 / Max applies to every shop tab; the Autobuy checkbox only to Upgrades
+  el.buyamt.style.visibility = t === 'stats' ? 'hidden' : '';
+  el.autoBuyRow.hidden = !S.dl.auto || t !== 'up';
   refreshVisibleTab();
 }
 
@@ -45,7 +47,7 @@ export function buildHud(): void {
   $$('#buyamt button').forEach(b => b.addEventListener('click', () => {
     app.buyN = b.dataset.n as BuyAmount;
     $$('#buyamt button').forEach(x => x.classList.toggle('on', x === b));
-    refreshRunShop();
+    refreshVisibleTab();
   }));
   el.autoBuy.addEventListener('change', () => { S.autoBuy = el.autoBuy.checked; });
   el.mute.addEventListener('click', () => { S.mute = !S.mute; setMuteLabel(); });
@@ -84,7 +86,7 @@ export function frameHud(dt: number): void {
 export function tickHud(): void {
   setText(el.rate, '$' + fmt(rateAvg()) + ' / sec');
   refreshPins();
-  el.autoBuyRow.hidden = !S.dl.auto;
+  el.autoBuyRow.hidden = !S.dl.auto || app.tab !== 'up';
   const R = S.rift ? riftById(S.rift) : undefined;
   setText(el.riftHud, R ? `${R.name} · $${fmt(S.runEarned)} / $${fmt(R.goal)}` : '');
   refreshVisibleTab();
