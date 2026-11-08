@@ -32,6 +32,12 @@ export interface Crystal {
   born: number; timer: number; depth: number; ch: Chain | null;
 }
 export interface Well { x: number; y: number; vx: number; vy: number; a: number }
+
+/** Radius of a well's glow, in world units. Orbs popped inside it are worth stat.wellMult. */
+export const WELL_GLOW = 120;
+
+const inWellGlow = (x: number, y: number): boolean =>
+  world.wells.some(w => (w.x - x) ** 2 + (w.y - y) ** 2 < WELL_GLOW ** 2);
 export interface Drone { a: number; t: number; x: number; y: number }
 export interface Beam { x1: number; y1: number; x2: number; y2: number; life: number }
 
@@ -135,7 +141,9 @@ function pop(o: Orb, depth: number, ch: Chain | null): void {
   if (o.dead) return;
   o.dead = true;
   const col = colorOf(o);
-  earn(stat.value * col.mult * stat.combo ** depth, ch);
+  const inWell = world.wells.length > 0 && inWellGlow(o.x, o.y);
+  earn(stat.value * col.mult * stat.combo ** depth * (inWell ? stat.wellMult : 1), ch);
+  if (inWell) burst(o.x, o.y, '#b98bff', 5, 90, .45);
   if (ch && depth > ch.maxD) ch.maxD = depth;
   S.popped++;
   burst(o.x, o.y, col.rgb, o.type === 2 ? 22 : 9 + Math.min(depth, 10), o.type === 2 ? 240 : 140, .55);

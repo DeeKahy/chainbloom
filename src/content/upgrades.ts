@@ -43,7 +43,7 @@ export const UP: RunUpgradeDef[] = [
 
   { id: 'well', cat: 'Field', name: 'Gravity Well', base: 80000, g: 6, max: 3, hint: 'Earn $80K this run',
     unlock: S => S.runEarned >= 80000,
-    desc: (l, t) => `Wells ${l} → ${t}. Drifting wells pull orbs into dense swirls.` },
+    desc: (l, t, stat) => `Wells ${l} → ${t}. Wells pull orbs into dense swirls, and orbs popped in a well's glow are worth ×${stat.wellMult}.` },
   { id: 'crystal', cat: 'Field', name: 'Crystal Lattice', base: 200000, g: 2.8, max: 12, hint: 'Earn $200K this run',
     unlock: S => S.runEarned >= 200000,
     desc: (l, t) => l === 0 && t === 1 ? 'Crystals grow across the field. Touch one and the whole lattice shatters, firing blasts as it goes.'

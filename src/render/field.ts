@@ -1,6 +1,6 @@
 import { clock } from '../core/app';
 import { TAU } from '../core/util';
-import { world, BlastKind } from '../sim/world';
+import { world, BlastKind, WELL_GLOW } from '../sim/world';
 import { S } from '../state/state';
 import { stat } from '../systems/stats';
 import { ctx, field, size } from './canvas';
@@ -37,9 +37,9 @@ export function renderField(): void {
 
   // wells
   for (const w of world.wells) {
-    const g = ctx.createRadialGradient(w.x, w.y, 0, w.x, w.y, 120);
+    const g = ctx.createRadialGradient(w.x, w.y, 0, w.x, w.y, WELL_GLOW);
     g.addColorStop(0, 'rgba(0,0,0,.9)'); g.addColorStop(.25, 'rgba(60,30,110,.35)'); g.addColorStop(1, 'rgba(60,30,110,0)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(w.x, w.y, 120, 0, TAU); ctx.fill();
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(w.x, w.y, WELL_GLOW, 0, TAU); ctx.fill();
     ctx.strokeStyle = 'rgba(185,139,255,.35)'; ctx.lineWidth = 1.5 * thick;
     for (let k = 0; k < 3; k++) {
       ctx.beginPath(); ctx.arc(w.x, w.y, 22 + k * 14, w.a * (2 - k * .5) + k, w.a * (2 - k * .5) + k + 2.2); ctx.stroke();

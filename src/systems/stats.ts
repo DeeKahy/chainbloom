@@ -21,6 +21,8 @@ export interface Stats {
   pSplit: number;
   unstable: number;
   wells: number;
+  /** Value multiplier for orbs popped inside a well's glow (radius WELL_GLOW). */
+  wellMult: number;
   cryRate: number;
   cryCap: number;
   cryVal: number;
@@ -51,6 +53,7 @@ export function recalc(): void {
   stat.pSplit = .02 * l.split;
   stat.unstable = .002 * l.unstable;
   stat.wells = l.well;
+  stat.wellMult = 2;
   stat.cryRate = l.crystal ? 1.5 + 1.2 * l.crystal : 0;
   stat.cryCap = l.crystal ? 60 + 30 * l.crystal : 0;
   stat.cryVal = 2 + l.cryVal;
