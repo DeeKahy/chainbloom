@@ -38,6 +38,7 @@ function resetStardustLayer(): void {
 /** Singularity: Dark Matter, its upgrades and the Constellation go. Rift seals, records and settings stay. */
 function resetDarkLayer(): void {
   for (const u of DU) S.dl[u.id] = 0;
+  if (S.sl.keepAuto) S.dl.auto = 1; // Eternal Autobuyer
   S.dm = 0;
   if (S.sl.keepBoard) for (const n of S.board) n.c = 0; // Star Chart: layout kept, nothing to refund
   else S.board = [];
@@ -173,6 +174,7 @@ export function doSingularity(): void {
 /** Called every UI tick: track the cycle's peak (the Singularity gain) and run Auto-Collapse. */
 export function tickPrestige(): void {
   if (S.runEarned > S.cyclePeak) S.cyclePeak = S.runEarned;
+  if (S.sl.keepAuto && !S.dl.auto) S.dl.auto = 1; // Eternal Autobuyer, the tick after it is bought
   maybeAutoCollapse();
 }
 

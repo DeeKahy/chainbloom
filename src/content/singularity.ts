@@ -35,6 +35,8 @@ export const SL: UpgradeDef[] = [
     desc: (l, t) => `Flares last ${20 + 5 * l}s → ${20 + 5 * t}s` },
   { id: 'corona', name: 'Corona', base: 6, g: 1.8, max: 10,
     desc: (l, t) => `A flare lifts dilation by +${(.1 + .02 * l).toFixed(2)} → +${(.1 + .02 * t).toFixed(2)}` },
+  { id: 'keepAuto', name: 'Eternal Autobuyer', base: 10, g: 1, max: 1,
+    desc: () => 'You keep the Dark Matter Autobuyer for good: it survives every Singularity, so Autobuy on the Upgrades tab never goes away.' },
   { id: 'autoStar', name: 'Stardust Autobuyer', base: 12, g: 1, max: 1,
     desc: () => 'Automatically buys the cheapest Stardust upgrade you can afford. Toggle it in the Supernova tab.' },
   { id: 'autoCol', name: 'Auto-Collapse', base: 15, g: 1, max: 1,
