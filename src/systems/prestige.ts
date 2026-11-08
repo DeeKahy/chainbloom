@@ -10,7 +10,7 @@ import { field } from '../render/canvas';
 import { colorOf } from '../render/sprites';
 import { clearBoardFx, rebuildBoardMap } from '../sim/board';
 import { addBlast, BlastKind, burst, clearAll, clearRun, screenFlash, world } from '../sim/world';
-import { clearSave, save } from '../state/save';
+import { clearSave, resumeSaving, save } from '../state/save';
 import { fresh, replaceState, S, type GameState } from '../state/state';
 import { toast } from '../ui/toast';
 import { autoRateAvg } from './economy';
@@ -228,6 +228,7 @@ export function wipe(): void {
 }
 
 export function importState(next: GameState): void {
+  resumeSaving();
   adopt(next);
   save(autoRateAvg());
   refreshAll();
