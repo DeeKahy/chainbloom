@@ -2,7 +2,7 @@ import { DU, SU } from '../content/prestige';
 import type { NodeType } from '../content/types';
 import { UP } from '../content/upgrades';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 export interface BoardNode {
   q: number;
@@ -49,6 +49,8 @@ export interface GameState {
   /** Average money/sec from automated sources at last save, used for offline earnings. */
   lastRate: number;
   mute: boolean;
+  /** Stats-pane rows pinned to the orb field, by row id. */
+  pinned: string[];
   playTime: number;
 }
 
@@ -62,7 +64,7 @@ export function fresh(): GameState {
     stardust: 0, starsEver: 0, starsCycle: 0, st: levels(SU), novas: 0, autoNova: false,
     dm: 0, dmEver: 0, collapses: 0, dl: levels(DU), board: [], flux: 0, fluxEver: 0, pulseBank: 0,
     rift: 0, riftsDone: [], autoBuy: true,
-    popped: 0, best: 0, saved: 0, lastRate: 0, mute: false, playTime: 0,
+    popped: 0, best: 0, saved: 0, lastRate: 0, mute: false, pinned: [], playTime: 0,
   };
 }
 

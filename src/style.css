@@ -100,6 +100,7 @@ canvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
   #side{width:100%;flex:1;border-left:0;border-top:1px solid var(--line)}
   #money{font-size:34px}
   #combo{font-size:44px}
+  #pins span{font-size:11px;padding:2px 6px}
   #palInfo{font-size:11.5px;min-height:0}
   .pb{flex:1 1 70px;padding:4px 6px;font-size:11px}
   #palette{padding:7px;gap:5px}
@@ -107,3 +108,10 @@ canvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
 .savebox{display:flex;flex-direction:column;gap:6px}
 .savebox .row{display:flex;gap:6px}
 .savebox textarea{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;font:12px ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical}
+#pins{margin:8px auto 0;display:flex;flex-wrap:wrap;justify-content:center;gap:5px;max-width:min(560px,94%)}
+#pins span{background:rgba(19,23,49,.72);border:1px solid var(--line);border-radius:7px;padding:3px 8px;font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+#pins i{font-style:normal;color:var(--dim)}
+.stats .srow{cursor:pointer}
+.stats span.srow.on:nth-child(odd){color:var(--accent)}
+.stats span.srow.on:nth-child(odd)::before{content:'📌 '}
+.pinhint{font-size:12px;color:var(--dim);margin:-4px 2px 0}

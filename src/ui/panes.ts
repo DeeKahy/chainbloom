@@ -2,14 +2,14 @@ import { onRefresh } from '../core/app';
 import { $, fmt } from '../core/util';
 import { DU, SU } from '../content/prestige';
 import { AUTO_NOVA_RIFT, RIFTS } from '../content/rifts';
+import { refreshPins } from './pins';
+import { STAT_ROWS, togglePin } from './statRows';
 import type { RiftDef } from '../content/types';
-import { world } from '../sim/world';
 import { exportSave, parseImport } from '../state/save';
 import { S } from '../state/state';
 import {
   colGain, COLLAPSE_MIN, doCollapse, doNova, enterRift, importState, leaveRift, nextNovaAt, novaGain, wipe,
 } from '../systems/prestige';
-import { stat } from '../systems/stats';
 import { currencyShop, refreshRunShop } from './shop';
 import { armed, toast } from './toast';
 
@@ -139,18 +139,35 @@ export function buildStatsPane(): void {
     box.value = '';
     toast('Save imported', '#7dffb0');
   });
+  $('#statsBox').addEventListener('click', e => {
+    const id = (e.target as HTMLElement).closest<HTMLElement>('[data-id]')?.dataset.id;
+    if (!id) return;
+    togglePin(id);
+    refreshStatsPane();
+    refreshPins();
+  });
   onRefresh(refreshStatsPane);
 }
 
+/** Built once and updated in place, so a click isn't lost to a re-render between press and release. */
+const statEls = new Map<string, { name: HTMLElement; val: HTMLElement }>();
+
 export function refreshStatsPane(): void {
-  const rows: [string, string | number][] = [
-    ['Money', '$' + fmt(S.money)], ['Earned this run', '$' + fmt(S.runEarned)], ['Earned all time', '$' + fmt(S.total)],
-    ['Orbs popped', fmt(S.popped)], ['Biggest chain', fmt(S.best)], ['Supernovas', S.novas], ['Stardust earned', fmt(S.starsEver)],
-    ['Orb value', fmt(stat.value)], ['Chain depth', stat.depth], ['Resonance', '×' + stat.combo.toFixed(2) + ' / step'],
-    ['Max chain multiplier', '×' + fmt(stat.combo ** stat.depth)], ['Orbs on field', `${world.orbs.length} / ${stat.cap}`],
-    ['Collapses', S.collapses], ['Dark Matter earned', fmt(S.dmEver)], ['Flux earned', fmt(S.fluxEver)],
-    ['Flux bonus', '×' + fmt(stat.fluxMult)], ['Rifts sealed', `${S.riftsDone.length} / ${RIFTS.length}`],
-    ['Play time', Math.floor(S.playTime / 3600) + 'h ' + Math.floor(S.playTime / 60 % 60) + 'm'],
-  ];
-  $('#statsBox').innerHTML = rows.map(r => `<span>${r[0]}</span><span>${r[1]}</span>`).join('');
+  const box = $('#statsBox');
+  if (!statEls.size) {
+    for (const r of STAT_ROWS) {
+      const name = document.createElement('span'), val = document.createElement('span');
+      name.className = val.className = 'srow';
+      name.dataset.id = val.dataset.id = r.id;
+      name.textContent = r.label;
+      box.append(name, val);
+      statEls.set(r.id, { name, val });
+    }
+  }
+  for (const r of STAT_ROWS) {
+    const e = statEls.get(r.id)!, on = S.pinned.includes(r.id);
+    e.name.classList.toggle('on', on);
+    e.val.classList.toggle('on', on);
+    e.val.textContent = r.value();
+  }
 }

@@ -53,6 +53,8 @@ export const world = {
   flash: 0,
   flashCol: '255,245,220',
   lastBanner: 0,
+  /** The most recently finished chain, for the Stats pane and pinned stats. */
+  lastChain: { count: 0, total: 0, depth: 0 },
 };
 
 /** Hook for the big "N CHAIN" banner, set by the HUD so the sim stays DOM-free. */
@@ -201,6 +203,7 @@ function findTarget(): Orb | null {
 
 function finishChain(c: Chain): void {
   if (c.count > S.best) S.best = c.count;
+  if (c.count) world.lastChain = { count: c.count, total: c.total, depth: c.maxD };
   hooks.chainFinished(c);
   if (app.view === 'board') return;
   if (c.count >= 1 && world.texts.length < 70) {

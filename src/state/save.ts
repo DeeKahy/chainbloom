@@ -15,6 +15,10 @@ const MIGRATIONS: ((d: RawSave) => void)[] = [
     if (d.starsCycle === undefined) d.starsCycle = (d.starsEver as number) || 0;
     if (d.pulseBank === undefined) d.pulseBank = 0;
   },
+  // 2 → 3: stats can be pinned to the orb field.
+  d => {
+    if (!Array.isArray(d.pinned)) d.pinned = [];
+  },
 ];
 
 /** Turn any parsed save object into a complete, current GameState. */

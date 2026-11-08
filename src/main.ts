@@ -14,6 +14,7 @@ import { applyOfflineEarnings, checkRiftGoal, maybeAutoNova } from './systems/pr
 import { recalc } from './systems/stats';
 import { buildHud, frameHud, tickHud } from './ui/hud';
 import { buildPalette } from './ui/palette';
+import { buildPins } from './ui/pins';
 import { buildCollapsePane, buildNovaPane, buildStatsPane } from './ui/panes';
 import { buildRunShop } from './ui/shop';
 import { toast } from './ui/toast';
@@ -29,6 +30,7 @@ buildNovaPane();
 buildCollapsePane();
 buildStatsPane();
 buildPalette();
+buildPins();
 buildHud();
 rebuildBoardMap();
 bindInput();

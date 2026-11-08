@@ -7,6 +7,7 @@ import { rateAvg } from '../systems/economy';
 import { colGain, novaGain } from '../systems/prestige';
 import { refreshCollapsePane, refreshNovaPane, refreshStatsPane } from './panes';
 import { refreshPalette, setView } from './palette';
+import { refreshPins } from './pins';
 import { refreshRunShop } from './shop';
 import { toast } from './toast';
 
@@ -76,6 +77,7 @@ export function frameHud(dt: number): void {
 /** ~8×/sec: text, unlock reveals and the visible pane. */
 export function tickHud(): void {
   el.rate.textContent = '$' + fmt(rateAvg()) + ' / sec';
+  refreshPins();
   el.autoBuyRow.hidden = !S.dl.auto;
   const R = S.rift ? riftById(S.rift) : undefined;
   el.riftHud.textContent = R ? `${R.name} · $${fmt(S.runEarned)} / $${fmt(R.goal)}` : '';
