@@ -31,7 +31,7 @@ export interface Crystal {
   state: 0 | 1 | 2;
   born: number; timer: number; depth: number; ch: Chain | null;
 }
-export interface Well { x: number; y: number; vx: number; vy: number; a: number }
+export interface Well { x: number; y: number; vx: number; vy: number; a: number; /** Seconds until it spits out a violet orb. */ t: number }
 
 /** Radius of a well's glow, in world units. Orbs popped inside it are worth stat.wellMult. */
 export const WELL_GLOW = 120;
@@ -98,13 +98,15 @@ function near<T>(g: Grid<T>, x: number, y: number, r: number, fn: (o: T) => void
 }
 
 // ---------- spawning & effects ----------
-export function spawnOrb(x?: number, y?: number, vx?: number, vy?: number): void {
+/** `force` sets the orb type instead of rolling it (wells spit out violet orbs). */
+export function spawnOrb(x?: number, y?: number, vx?: number, vy?: number, force?: number): void {
   const { W, H } = field;
   let type = 0;
   const r = Math.random();
   if (r < stat.pGold) type = 1;
   else if (r < stat.pGold + stat.pVol) type = 2;
   else if (r < stat.pGold + stat.pVol + stat.pSplit) type = 3;
+  if (force !== undefined) type = force;
   const a = Math.random() * TAU, sp = rand(6, 22);
   world.orbs.push({
     x: x ?? rand(20, W - 20), y: y ?? rand(20, H - 20),
@@ -263,13 +265,23 @@ export function updateField(dt: number): void {
 
   // wells
   const wells = world.wells;
-  while (wells.length < stat.wells) wells.push({ x: rand(W * .2, W * .8), y: rand(H * .2, H * .8), vx: rand(-18, 18), vy: rand(-18, 18), a: 0 });
+  while (wells.length < stat.wells) wells.push({ x: rand(W * .2, W * .8), y: rand(H * .2, H * .8), vx: rand(-18, 18), vy: rand(-18, 18), a: 0, t: rand(.5, stat.wellOrbEvery) });
   if (wells.length > stat.wells) wells.length = stat.wells;
   for (const w of wells) {
     w.x += w.vx * dt; w.y += w.vy * dt; w.a += dt;
     if (w.x < 80 || w.x > W - 80) w.vx *= -1;
     if (w.y < 80 || w.y > H - 80) w.vy *= -1;
     w.x = Math.max(79, Math.min(W - 79, w.x)); w.y = Math.max(79, Math.min(H - 79, w.y));
+    // Every few seconds a well spits a violet (Mitosis) orb out of its core, flung into the swirl.
+    w.t -= dt;
+    if (w.t <= 0) {
+      w.t = stat.wellOrbEvery * rand(.85, 1.15);
+      if (world.orbs.length < stat.cap) {
+        const a = Math.random() * TAU, ox = Math.cos(a), oy = Math.sin(a);
+        spawnOrb(w.x + ox * 34, w.y + oy * 34, ox * 70 - oy * 45, oy * 70 + ox * 45, 3);
+        burst(w.x + ox * 34, w.y + oy * 34, '#b98bff', 8, 80, .4);
+      }
+    }
   }
 
   // orbs

@@ -25,7 +25,7 @@ The user thinks in layers and wants to keep adding them. Keep the code shaped so
 - *Chain Reaction:* popped orbs explode too, up to the chain depth. *Resonance* multiplies value at each step deeper, and *Shockwave* widens the blasts.
 - *Automation:* Detonator Drones fire at the densest cluster, Overclock speeds them up, and Instability makes orbs go critical on their own.
 - *Exotic orbs:* red is a huge blast that doesn't use up depth, gold is worth ×15, and violet splits into 3 orbs.
-- *Field:* Gravity Wells swirl orbs into clusters, and orbs popped in a well's glow are worth ×2 (`stat.wellMult`). Crystal Lattice grows like coral and shatters in a cascade when touched.
+- *Field:* Gravity Wells swirl orbs into clusters, spit out a violet orb every 2 s each (`stat.wellOrbEvery`), and orbs popped in a well's glow are worth ×1.2 (`stat.wellMult`). Crystal Lattice grows like coral and shatters in a cascade when touched.
 
 **Layer 2: Supernova → Stardust ✦.** Needs $1M in a run and resets layer 1. Gain is `floor(sqrt(runEarned/1e5) × starMult)`. Permanent upgrades: value multiplier, starting cash, spawns and cap, free drones, free depth, and Fission (a chance a chain blast keeps its depth).
 
