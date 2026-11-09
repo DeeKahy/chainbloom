@@ -42,6 +42,17 @@ const MIGRATIONS: ((d: RawSave) => void)[] = [
   d => {
     if (typeof d.hopBest !== 'number') d.hopBest = 0;
   },
+  // 8 → 9: the Repulsion law is gone. A universe set to it goes back to none. If it was the only Law
+  // owned, the next one is free again (as the first Law always is); otherwise its 4 Threads come back.
+  d => {
+    if (Array.isArray(d.laws)) d.laws = d.laws.map(l => l === 'repel' ? '' : l);
+    const tl = d.tl as Record<string, number> | undefined;
+    if (tl?.lawRepel) {
+      const others = ['lawSquare', 'lawFlip', 'lawQuick'].some(id => tl[id] > 0);
+      if (others && typeof d.threads === 'number') d.threads += 4;
+      delete tl.lawRepel;
+    }
+  },
 ];
 
 /**

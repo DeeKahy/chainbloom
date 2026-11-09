@@ -7,7 +7,7 @@ import { GL, type Bed, type Seed } from '../content/garden';
 import { LL, LOOM_MAX } from '../content/loom';
 import { EL } from '../content/bang';
 
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 
 export interface BoardNode {
   q: number;

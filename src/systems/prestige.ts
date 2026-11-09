@@ -71,7 +71,7 @@ const MV_KEEPS = ['keepAuto', 'autoStar', 'autoCol', 'keepBoard'];
  * Thread upgrades a Big Bang keeps without Remembered Weave: the automation, Déjà Vu and the Laws
  * of Physics (they change how a universe plays rather than how strong it is).
  */
-const BANG_KEEPS_TL = ['dmAuto', 'deja', 'lawSquare', 'lawRepel', 'lawFlip', 'lawQuick'];
+const BANG_KEEPS_TL = ['dmAuto', 'deja', 'lawSquare', 'lawFlip', 'lawQuick'];
 
 /**
  * Big Bang: the Loom, Knots, Pollen, Threads and every layer below go. Seeds and the garden layout,

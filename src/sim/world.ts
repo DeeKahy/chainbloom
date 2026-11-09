@@ -77,8 +77,6 @@ function makeWorld(index: number) {
     holeA: 0,
     /** Bridge glow, set when a blast passes through. */
     portalFlash: 0,
-    /** Frames updated, for spreading Repulsion over several frames in a crowded field. */
-    frame: 0,
     /** Events from the other universe, handled at the start of this universe's next update. */
     inbox: {
       blasts: [] as { x: number; y: number; R: number; depth: number; ch: Chain | null; kind: BlastKind }[],
@@ -117,9 +115,6 @@ const sideBySide = (): boolean => layout.split;
 
 /** How far short of the edge a blast may stop and still go through, in world units. */
 const BRIDGE_REACH = 24;
-/** Orbs a field holds before Repulsion is spread over several frames (see updateField). */
-const REPEL_FULL = 500;
-
 /** Orbs this close to the gate drift toward it, so chains near it tend to cross. */
 const BRIDGE_PULL = 230;
 
@@ -558,11 +553,6 @@ export function updateField(dt: number): void {
 
   // orbs
   const damp = 1 - .55 * dt;
-  const repel = law === 'repel';
-  // Repulsion compares every orb with its neighbours, which gets expensive in a packed field (the
-  // Stillness holds 1,800): past REPEL_FULL orbs each orb is pushed only every k-th frame, k times harder.
-  const repelEvery = repel ? Math.max(1, Math.ceil(world.orbs.length / REPEL_FULL)) : 1, repelPhase = world.frame++ % repelEvery;
-  let oi = 0;
   for (const o of world.orbs) {
     if (o.dead) continue;
     o.vx += (Math.random() - .5) * 40 * dt; o.vy += (Math.random() - .5) * 40 * dt;
@@ -592,14 +582,6 @@ export function updateField(dt: number): void {
         const f = 55 * (1 - d / BRIDGE_PULL) * dt;
         o.vx += dx / d * f; o.vy += dy / d * f;
       }
-    }
-    if (repel && oi++ % repelEvery === repelPhase) {
-      // Law: Repulsion. Orbs keep their distance and spread into an even lattice (last frame's grid).
-      near(grid, o.x, o.y, 40, p => {
-        if (p === o || p.dead) return;
-        const dx = o.x - p.x, dy = o.y - p.y, d2 = dx * dx + dy * dy;
-        if (d2 > 1 && d2 < 1600) { const d = Math.sqrt(d2), f = 90 * repelEvery * (1 - d / 40) * dt / d; o.vx += dx * f; o.vy += dy * f; }
-      });
     }
     o.vx *= damp; o.vy *= damp;
     const sp = Math.hypot(o.vx, o.vy);

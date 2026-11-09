@@ -14,13 +14,13 @@ export interface LawDef { id: string; name: string; desc: string; upgrade: strin
 export const LAWS: LawDef[] = [
   { id: 'square', name: 'Square Blasts', upgrade: 'lawSquare',
     desc: 'Blasts are squares: the same radius, but they reach into the corners.' },
-  { id: 'repel', name: 'Repulsion', upgrade: 'lawRepel',
-    desc: 'Orbs push each other away and settle into an even lattice. Chains spread far and evenly instead of clumping.' },
   { id: 'flip', name: 'Gravity Flip', upgrade: 'lawFlip',
     desc: 'Every 10 seconds, wells and the black hole switch between pulling and pushing.' },
   { id: 'quick', name: 'Quick Time', upgrade: 'lawQuick',
     desc: 'This universe runs 1.5× faster, but its orbs are worth ×0.6.' },
 ];
+
+const lawDesc = (id: string): string => LAWS.find(l => l.id === id)!.desc;
 
 /** Height of the bridge before Wider Bridge, in world units. */
 export const BRIDGE_SPAN = 260;
@@ -42,13 +42,11 @@ export const TL: UpgradeDef[] = [
     desc: (l, t) => l === 0 ? 'A chain that pops the five colours of the melody in a row pays ×3 for the whole chain. Shown at the top.'
       : `Melody chains pay ×${2 + l} → ×${2 + t}` },
   { id: 'lawSquare', name: 'Law: Square Blasts', base: 4, g: 1, max: 1, free: firstLawFree,
-    desc: () => 'Unlocks the Square Blasts law. ' + LAWS[0].desc },
-  { id: 'lawRepel', name: 'Law: Repulsion', base: 4, g: 1, max: 1, free: firstLawFree,
-    desc: () => 'Unlocks the Repulsion law. ' + LAWS[1].desc },
+    desc: () => 'Unlocks the Square Blasts law. ' + lawDesc('square') },
   { id: 'lawFlip', name: 'Law: Gravity Flip', base: 6, g: 1, max: 1, free: firstLawFree,
-    desc: () => 'Unlocks the Gravity Flip law. ' + LAWS[2].desc },
+    desc: () => 'Unlocks the Gravity Flip law. ' + lawDesc('flip') },
   { id: 'lawQuick', name: 'Law: Quick Time', base: 6, g: 1, max: 1, free: firstLawFree,
-    desc: () => 'Unlocks the Quick Time law. ' + LAWS[3].desc },
+    desc: () => 'Unlocks the Quick Time law. ' + lawDesc('quick') },
   { id: 'deja', name: 'Déjà Vu', base: 6, g: 1, max: 1,
     desc: () => 'Rift seals survive a Multiverse, so Auto-Supernova and every node type stay unlocked.' },
   { id: 'dmAuto', name: 'Dark Matter Autobuyer', base: 5, g: 1, max: 1,
