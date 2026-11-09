@@ -27,7 +27,7 @@ export const SL: UpgradeDef[] = [
     desc: (l, t) => `Dilation ^${(DILATION_BASE + DILATION_STEP * l).toFixed(2)} → ^${(DILATION_BASE + DILATION_STEP * t).toFixed(2)}. Orb value is raised to this power.` },
   { id: 'memory', name: 'Chain Memory', base: 25, g: 1, max: 1,
     desc: (_l, _t, stat) => `Singularity gain × your longest chain, on a log curve that flattens past ~100K. Now ×${stat.chainMem.toFixed(2)}.` },
-  { id: 'hawking', name: 'Hawking Radiation', base: 10, g: 2, max: 20,
+  { id: 'hawking', name: 'Hawking Radiation', base: 10, g: 2, max: 13,
     desc: (l, t) => `Singularity gain ×${fmt(1.4 ** l)} → ×${fmt(1.4 ** t)}` },
   { id: 'accrete', name: 'Accretion', base: 4, g: 1.8, max: 10,
     desc: (l, t) => `Mass per orb popped near the black hole ×${fmt(1.5 ** l)} → ×${fmt(1.5 ** t)}` },
