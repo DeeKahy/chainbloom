@@ -33,6 +33,11 @@ const MIGRATIONS: ((d: RawSave) => void)[] = [
     if (!Array.isArray(d.laws)) d.laws = ['', ''];
     if (typeof d.melody !== 'string') d.melody = '01201';
   },
+  // 6 → 7: Threads also flow in live from every cross-world pop.
+  d => {
+    if (typeof d.crossTotal !== 'number') d.crossTotal = 0;
+    if (typeof d.threadsLive !== 'number') d.threadsLive = 0;
+  },
 ];
 
 /**

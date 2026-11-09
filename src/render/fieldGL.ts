@@ -1,5 +1,5 @@
 import { clock } from '../core/app';
-import { BlastKind, HOLE_CORE, HOLE_FEED, multiverseOn, world, WELL_GLOW } from '../sim/world';
+import { BlastKind, gate, HOLE_CORE, HOLE_FEED, multiverseOn, world, WELL_GLOW } from '../sim/world';
 import { stat } from '../systems/stats';
 import { field, glCv, layoutChanged, size, type View } from './canvas';
 import { colorOf, CRY, WHITE } from './sprites';
@@ -343,10 +343,17 @@ export function renderFieldGL(v: View, shakeX: number, shakeY: number): void {
 
   // the bridge: a glowing gate on the edge facing the other universe
   if (multiverseOn()) {
-    const x = world.index === 0 ? field.W - 2 : 2, y0 = field.H / 2 - stat.portalSpan / 2, y1 = field.H / 2 + stat.portalSpan / 2;
-    const glow = .5 + .2 * Math.sin(T * 3) + .6 * world.portalFlash;
-    put(x, y0, 0, SEGMENT, rgbOf('#7fd4ff'), glow * .35, x, y1, 14 * thick);
-    put(x, y0, 0, SEGMENT, rgbOf('#e6f7ff'), glow, x, y1, 3 * thick);
+    const g = gate(world), h = stat.portalSpan / 2;
+    // the gate line sits just inside the edge; (ex, ey) runs along it
+    const ex = g.ny ? 1 : 0, ey = g.nx ? 1 : 0, cx = g.x - g.nx * 2, cy = g.y - g.ny * 2;
+    const x0 = cx - ex * h, y0 = cy - ey * h, x1 = cx + ex * h, y1 = cy + ey * h;
+    const glow = .55 + .2 * Math.sin(T * 3) + .7 * world.portalFlash;
+    const blue = rgbOf('#7fd4ff'), white = rgbOf('#e6f7ff');
+    put(x0, y0, 0, SEGMENT, blue, glow * .12, x1, y1, 46 * thick);
+    put(x0, y0, 0, SEGMENT, blue, glow * .35, x1, y1, 16 * thick);
+    put(x0, y0, 0, SEGMENT, white, glow, x1, y1, 3.5 * thick);
+    put(x0, y0, 7 * thick, ORB, white, glow);
+    put(x1, y1, 7 * thick, ORB, white, glow);
   }
 
   const use = (p: WebGLProgram, u: Uniforms): void => {

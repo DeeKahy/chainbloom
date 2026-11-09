@@ -1,10 +1,10 @@
 import { clock } from '../core/app';
 import { TAU } from '../core/util';
 import { LAWS } from '../content/multiverse';
-import { BlastKind, HOLE_CORE, HOLE_FEED, multiverseOn, useWorld, WELL_GLOW, world, worlds, type World } from '../sim/world';
+import { BlastKind, gate, HOLE_CORE, HOLE_FEED, multiverseOn, useWorld, WELL_GLOW, world, worlds, type World } from '../sim/world';
 import { S } from '../state/state';
 import { stat } from '../systems/stats';
-import { ctx, field, layout, size, type View } from './canvas';
+import { ctx, field, size, type View } from './canvas';
 import { colorOf, CRY, WHITE } from './sprites';
 import { renderFieldGL } from './fieldGL';
 
@@ -159,10 +159,15 @@ function drawWorld2D(v: View): void {
 
   // the bridge
   if (multiverseOn()) {
-    const x = world.index === 0 ? field.W - 2 : 2, y0 = field.H / 2 - stat.portalSpan / 2;
-    ctx.globalAlpha = Math.min(1, .5 + .2 * Math.sin(T * 3) + .6 * world.portalFlash);
-    ctx.fillStyle = 'rgba(127,212,255,.35)'; ctx.fillRect(x - 7 * thick, y0, 14 * thick, stat.portalSpan);
-    ctx.fillStyle = '#e6f7ff'; ctx.fillRect(x - 1.5 * thick, y0, 3 * thick, stat.portalSpan);
+    const g = gate(world), h = stat.portalSpan / 2;
+    const cx = g.x - g.nx * 2, cy = g.y - g.ny * 2;
+    // a band of width w across the edge, the gate's span along it
+    const band = (w: number): void => g.nx ? ctx.fillRect(cx - w / 2, cy - h, w, h * 2) : ctx.fillRect(cx - h, cy - w / 2, h * 2, w);
+    const glow = .55 + .2 * Math.sin(T * 3) + .7 * world.portalFlash;
+    ctx.globalAlpha = Math.min(1, glow * .12); ctx.fillStyle = '#7fd4ff'; band(46 * thick);
+    ctx.globalAlpha = Math.min(1, glow * .35); band(16 * thick);
+    ctx.globalAlpha = Math.min(1, glow); ctx.fillStyle = '#e6f7ff'; band(3.5 * thick);
+    for (const s of [-h, h]) { ctx.beginPath(); ctx.arc(cx + (g.nx ? 0 : s), cy + (g.nx ? s : 0), 3.5 * thick, 0, TAU); ctx.fill(); }
     ctx.globalAlpha = 1;
   }
   ctx.restore();
@@ -200,7 +205,7 @@ export function renderFieldWithGL(): void {
 function drawLinks(): void {
   if (!multiverseOn()) return;
   const [a, b] = worlds;
-  if (layout.split) {
+  if (a.view.visible && b.view.visible) {
     ctx.strokeStyle = 'rgba(201,166,255,.13)'; ctx.lineWidth = 1;
     ctx.beginPath();
     for (const o of a.orbs) {

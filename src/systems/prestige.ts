@@ -1,16 +1,16 @@
-import { initAudio, tone } from '../audio';
+import { initAudio, soundOn, tone } from '../audio';
 import { refreshAll } from '../core/app';
 import { fmt } from '../core/util';
 import { DU, memoryStardust, seedMoney, SU } from '../content/prestige';
 import { SL } from '../content/singularity';
-import { sparkDM } from '../content/multiverse';
+import { liveThreads, sparkDM } from '../content/multiverse';
 import { riftById, RIFTS } from '../content/rifts';
 import type { RiftDef, UpgradeDef } from '../content/types';
 import { UP } from '../content/upgrades';
 import { field } from '../render/canvas';
 import { colorOf } from '../render/sprites';
 import { clearBoardFx, rebuildBoardMap } from '../sim/board';
-import { addBlast, BlastKind, burst, clearAll, clearHoles, clearRun, newMelody, screenFlash, world } from '../sim/world';
+import { addBlast, BlastKind, bridgeText, burst, clearAll, clearHoles, clearRun, newMelody, screenFlash, world } from '../sim/world';
 import { clearSave, resumeSaving, save } from '../state/save';
 import { fresh, replaceState, S, type GameState } from '../state/state';
 import { toast } from '../ui/toast';
@@ -54,16 +54,22 @@ function resetDarkLayer(): void {
   resetStardustLayer(); // after the DU reset, so Nebula Memory gives no Stardust
 }
 
-/** Multiverse: everything below goes, except the Eternal Autobuyer (and Rift seals with Déjà Vu). */
+/**
+ * Singularity upgrades that survive a Multiverse: the automation and Star Chart, so a new cycle
+ * replays the lower layers by itself instead of by hand.
+ */
+const MV_KEEPS = ['keepAuto', 'autoStar', 'autoCol', 'keepBoard'];
+
+/** Multiverse: everything below goes, except MV_KEEPS (and Rift seals with Déjà Vu). */
 function resetSingularityLayer(): void {
-  const eternal = S.sl.keepAuto;
+  const kept = MV_KEEPS.map(id => S.sl[id]);
   for (const u of SL) S.sl[u.id] = 0;
-  S.sl.keepAuto = eternal;
+  MV_KEEPS.forEach((id, i) => { S.sl[id] = kept[i]; });
   S.sing = 0; S.singularities = 0;
   resetDarkLayer(); // also the Constellation, Stardust and the run; keeps the Autobuyer via keepAuto
   if (!S.tl.deja) S.riftsDone = [];
   S.dm = sparkDM(S.tl.spark);
-  S.crossBest = 0;
+  S.crossBest = 0; S.crossTotal = 0; S.threadsLive = 0;
 }
 
 // ---------- gains ----------
@@ -87,16 +93,27 @@ export const collapseComplete = (): boolean =>
 export const singularityComplete = (): boolean => SL.every(u => S.sl[u.id] >= u.max);
 
 /**
- * Threads ❖ from the best cross-world chain this cycle (pops it made in the other universe):
- * log10(1 + pops)², so ~9 at 1K, 16 at 10K, 25 at 100K, times Weaving. The first Multiverse gives
- * a flat 10 (there is no universe B to cross into yet). Later ones also need a Singularity in the
- * cycle, so each one is a full climb through every layer.
+ * Threads ❖ paid on a Multiverse, from the best cross-world chain this cycle (pops it made in the
+ * other universe): log10(1 + pops)², so ~9 at 1K, 16 at 10K, 25 at 100K, times Weaving. The first
+ * Multiverse gives a flat 10 (there is no universe B to cross into yet). No Singularity is needed,
+ * so a short cycle pays too. Threads also flow in live during the cycle (tickThreadFlow).
  */
 export function mvGain(): number {
   if (S.rift) return 0;
   if (!S.multiverses) return singularityComplete() ? 10 : 0;
-  if (!S.singularities) return 0;
   return Math.floor(Math.log10(1 + S.crossBest) ** 2 * stat.threadMult);
+}
+
+/** Live Threads: pay out whatever liveThreads(crossTotal) has grown to since the last check. */
+function tickThreadFlow(): void {
+  if (!S.multiverses || S.rift) return;
+  const target = liveThreads(S.crossTotal, stat.threadMult);
+  if (target <= S.threadsLive) return;
+  const g = target - S.threadsLive;
+  S.threadsLive = target;
+  S.threads += g; S.threadsEver += g;
+  bridgeText(`+${fmt(g)} ❖`, '#7fd4ff', 22);
+  if (soundOn()) tone(1046, .5, .05, 'triangle', 1568);
 }
 
 /** Money (as a power of ten) the cycle must peak at before a Singularity gives anything. */
@@ -222,11 +239,12 @@ export function doMultiverse(): void {
   save(autoRateAvg());
 }
 
-/** Called every UI tick: track the cycle's peak (the Singularity gain) and run Auto-Collapse. */
+/** Called every UI tick: track the cycle's peak (the Singularity gain), run Auto-Collapse, pay live Threads. */
 export function tickPrestige(): void {
   if (S.runEarned > S.cyclePeak) S.cyclePeak = S.runEarned;
   if (S.sl.keepAuto && !S.dl.auto) S.dl.auto = 1; // Eternal Autobuyer, the tick after it is bought
   maybeAutoCollapse();
+  tickThreadFlow();
 }
 
 // ---------- Rifts ----------

@@ -1,7 +1,7 @@
 import { blip, refillBudget, soundOn, tone } from '../audio';
 import { app, clock } from '../core/app';
 import { fmt, rand, TAU } from '../core/util';
-import { field, views, type View } from '../render/canvas';
+import { field, layout, views, type View } from '../render/canvas';
 import { colorOf, CRY } from '../render/sprites';
 import { S } from '../state/state';
 import { earn, tickRate, type Chain } from '../systems/economy';
@@ -106,6 +106,38 @@ export const activeWorlds = (): World[] => multiverseOn() ? worlds : [worlds[0]]
 const other = (w: World): World => worlds[1 - w.index];
 const lawOf = (w: World): string => S.laws[w.index] || '';
 
+// ---------- the bridge ----------
+/**
+ * The bridge sits on the edge the two universes share on screen: A's right and B's left edge
+ * when they are side by side, A's bottom and B's top edge when they are stacked (narrow screens).
+ */
+const sideBySide = (): boolean => layout.split;
+
+/** How far short of the edge a blast may stop and still go through, in world units. */
+const BRIDGE_REACH = 24;
+/** Orbs this close to the gate drift toward it, so chains near it tend to cross. */
+const BRIDGE_PULL = 230;
+
+/** Centre of this universe's gate (on its edge) and the unit vector pointing out through it. */
+export function gate(w: World): { x: number; y: number; nx: number; ny: number } {
+  const { W, H } = w.view, a = w.index === 0;
+  return sideBySide() ? { x: a ? W : 0, y: H / 2, nx: a ? 1 : -1, ny: 0 } : { x: W / 2, y: a ? H : 0, nx: 0, ny: a ? 1 : -1 };
+}
+
+/** A point in universe `from`, mirrored across the shared edge into universe `to` (twins, Mirror). */
+function mirrored(x: number, y: number, from: World, to: World): [number, number] {
+  const fx = x / from.view.W, fy = y / from.view.H;
+  return sideBySide() ? [(1 - fx) * to.view.W, fy * to.view.H] : [fx * to.view.W, (1 - fy) * to.view.H];
+}
+
+/** Floating text at universe A's gate (live Threads, cross-world totals). */
+export function bridgeText(t: string, c: string, size = 16, w: World = worlds[0]): void {
+  if (!multiverseOn() || app.view === 'board' || w.texts.length >= 70) return;
+  // spread along the gate so several in a row don't pile up on one spot
+  const g = gate(w), s = rand(-.4, .4) * stat.portalSpan;
+  w.texts.push({ x: g.x - g.nx * 110 + (g.nx ? 0 : s), y: g.y - g.ny * 70 + (g.ny ? 0 : s), t, size, life: 1.6, max: 1.6, c });
+}
+
 /** State shared by both universes. */
 export const shared = {
   lastBanner: 0,
@@ -202,9 +234,9 @@ function maybeEntangle(o: Orb): void {
   if (!multiverseOn() || !stat.pTwin || Math.random() >= stat.pTwin) return;
   const here = world, there = other(here);
   if (there.orbs.length >= stat.cap) return;
-  const fx = (here.view.W - o.x) / here.view.W, fy = o.y / here.view.H;
+  const [tx, ty] = mirrored(o.x, o.y, here, there), side = sideBySide();
   useWorld(there);
-  const t = spawnOrb(fx * field.W, fy * field.H, -o.vx, o.vy, o.type);
+  const t = spawnOrb(tx, ty, side ? -o.vx : o.vx, side ? o.vy : -o.vy, o.type);
   t.hue = o.hue;
   useWorld(here);
   o.twin = t; t.twin = o;
@@ -237,8 +269,8 @@ function detonation(x: number, y: number, R: number, kind: BlastKind, auto: bool
   const ch = newChain(x, y, auto);
   addBlast(x, y, R, 0, ch, kind);
   if (multiverseOn() && stat.mirror && Math.random() < stat.mirror) {
-    const there = other(world);
-    there.inbox.mirrors.push({ x: (1 - x / field.W) * there.view.W, y: y / field.H * there.view.H, t: .6 });
+    const there = other(world), [mx, my] = mirrored(x, y, world, there);
+    there.inbox.mirrors.push({ x: mx, y: my, t: .6 });
   }
   return ch;
 }
@@ -259,7 +291,7 @@ function pop(o: Orb, depth: number, ch: Chain | null): void {
   if (inWell) burst(o.x, o.y, '#b98bff', 5, 90, .45);
   if (ch) {
     if (depth > ch.maxD) ch.maxD = depth;
-    if (ch.home !== world.index) ch.cross++;
+    if (ch.home !== world.index) { ch.cross++; S.crossTotal++; }
     // Melody: the colours of the last five normal orbs this chain popped
     if (stat.melodyMult > 1 && !ch.sang) {
       ch.notes = (ch.notes + (o.type ? 'x' : String(o.hue))).slice(-S.melody.length);
@@ -359,6 +391,7 @@ function finishChain(c: Chain): void {
     world.texts.push({ x: c.x, y: c.y - 10, t: '+' + fmt(c.total), size: 12 + big * 3.2, life: 1.1 + big * .1, max: 1.1 + big * .1,
       c: c.sang ? '#7dffb0' : c.cross ? '#7fd4ff' : c.maxD >= 4 ? '#ffd34d' : c.maxD >= 2 ? '#b98bff' : '#e8ecff' });
   }
+  if (c.cross >= 25) bridgeText('⇄ ' + fmt(c.cross) + ' crossed', '#bfe9ff', 13 + Math.log2(c.cross) * 1.5, world);
   if (c.count >= 15 && clock.T - shared.lastBanner > .5) {
     shared.lastBanner = clock.T;
     hooks.banner(c.count);
@@ -408,9 +441,12 @@ export function tickGlobal(dt: number): void {
 
 /** Whether a blast at (x, y) with radius r has reached this universe's bridge. */
 function atBridge(b: Blast): boolean {
-  const { W, H } = field;
-  if (Math.abs(b.y - H / 2) > stat.portalSpan / 2) return false;
-  return world.index === 0 ? b.x + b.r >= W - 2 : b.x - b.r <= 2;
+  const g = gate(world);
+  // distance along the edge from the gate centre, and how far the blast reaches past the edge line
+  const along = g.nx ? Math.abs(b.y - g.y) : Math.abs(b.x - g.x);
+  if (along > stat.portalSpan / 2) return false;
+  const out = g.nx ? (b.x - g.x) * g.nx : (b.y - g.y) * g.ny;
+  return out + b.r >= -BRIDGE_REACH;
 }
 
 /** Update the current universe (see useWorld). Quick Time passes a larger dt. */
@@ -481,6 +517,15 @@ export function updateField(dt: number): void {
   }
   const hx = W / 2, hy = H / 2;
 
+  // the bridge pulls nearby orbs toward its gate, and sparks drift into it
+  const gt = mv ? gate(world) : null, half = stat.portalSpan / 2;
+  if (gt && Math.random() < dt * 10) {
+    const s = rand(-half, half), d = rand(60, 200);
+    const px = gt.nx ? gt.x - gt.nx * d : gt.x + s, py = gt.ny ? gt.y - gt.ny * d : gt.y + s;
+    const l = d / 140;
+    world.parts.push({ x: px, y: py, vx: gt.nx * 140, vy: gt.ny * 140, life: l, max: l, c: '#7fd4ff', sz: 1.5 + Math.random() * 1.5 });
+  }
+
   // orbs
   const damp = 1 - .55 * dt;
   const repel = law === 'repel';
@@ -502,6 +547,16 @@ export function updateField(dt: number): void {
         const f = 150 * (1 - d / HOLE_PULL) * dt * (d < HOLE_CORE ? -1.4 : 1) * gs;
         o.vx += (dx / d * f) - (dy / d) * f * .7;
         o.vy += (dy / d * f) + (dx / d) * f * .7;
+      }
+    }
+    if (gt) {
+      // toward the nearest point of the gate segment
+      const qx = gt.nx ? gt.x : Math.max(gt.x - half, Math.min(gt.x + half, o.x));
+      const qy = gt.ny ? gt.y : Math.max(gt.y - half, Math.min(gt.y + half, o.y));
+      const dx = qx - o.x, dy = qy - o.y, d = Math.hypot(dx, dy);
+      if (d < BRIDGE_PULL && d > 1) {
+        const f = 55 * (1 - d / BRIDGE_PULL) * dt;
+        o.vx += dx / d * f; o.vy += dy / d * f;
       }
     }
     if (repel) {
@@ -560,11 +615,11 @@ export function updateField(dt: number): void {
     if (mv && !b.jumped && b.ch && b.kind !== BlastKind.Crystal && atBridge(b)) {
       b.jumped = true;
       const there = other(world);
-      there.inbox.blasts.push({
-        x: world.index === 0 ? 4 : there.view.W - 4,
-        y: Math.max(10, Math.min(there.view.H - 10, there.view.H / 2 + (b.y - H / 2))),
-        R: b.R, depth: b.depth, ch: b.ch, kind: b.kind,
-      });
+      // it comes out of the other gate at the same offset along the edge
+      const g = gate(world), tg = gate(there);
+      const x = tg.nx ? tg.x - tg.nx * 4 : Math.max(10, Math.min(there.view.W - 10, tg.x + (b.x - g.x)));
+      const y = tg.ny ? tg.y - tg.ny * 4 : Math.max(10, Math.min(there.view.H - 10, tg.y + (b.y - g.y)));
+      there.inbox.blasts.push({ x, y, R: b.R, depth: b.depth, ch: b.ch, kind: b.kind });
       world.portalFlash = 1;
     }
     if (p >= 1) b.done = true;

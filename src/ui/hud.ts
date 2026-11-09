@@ -53,7 +53,7 @@ export function buildHud(): void {
   }));
   el.autoBuy.addEventListener('change', () => { S.autoBuy = el.autoBuy.checked; });
   el.mute.addEventListener('click', () => { S.mute = !S.mute; setMuteLabel(); });
-  el.uniBtn.addEventListener('click', () => setLayout(true, layout.focus ? 0 : 1));
+  el.uniBtn.addEventListener('click', () => setLayout(true, (layout.focus + 1) % 3)); // both → A → B
   onRefresh(() => {
     el.autoBuy.checked = S.autoBuy;
     setMuteLabel();
@@ -115,10 +115,10 @@ export function tickHud(): void {
     el.mvTab.hidden = false;
     if (S.playTime > 1) toast('Multiverse unlocked', '#7fd4ff');
   }
-  // Multiverse: the view buttons show from the start, and a phone gets a switch between universes
+  // Multiverse: the view buttons show from the start, and a phone gets a switch: both stacked, A, B
   if (multiverseOn()) el.viewBtns.hidden = false;
   el.uniBtn.hidden = !multiverseOn() || layout.split || app.view !== 'orbs';
-  setText(el.uniBtn, layout.focus ? '⇄ A' : '⇄ B');
+  setText(el.uniBtn, ['⇄ A', '⇄ B', '⇄ A+B'][layout.focus]);
   // Melody: the five target colours
   el.melodyHud.hidden = !S.tl.melody || app.view !== 'orbs';
   if (!el.melodyHud.hidden) setHTML(el.melodyHud, '♫ ' + [...S.melody].map(n => `<i style="background:${NORMALS[+n].rgb};color:${NORMALS[+n].rgb}"></i>`).join(''));

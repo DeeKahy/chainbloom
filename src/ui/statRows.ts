@@ -45,6 +45,7 @@ export const STAT_ROWS: StatRow[] = [
   { id: 'multiverses', label: 'Multiverses', value: () => String(S.multiverses) },
   { id: 'threadsEver', label: 'Threads earned', value: () => fmt(S.threadsEver) },
   { id: 'crossBest', label: 'Best cross-world chain', value: () => fmt(S.crossBest) + ' pops' },
+  { id: 'crossTotal', label: 'Cross-world pops this cycle', value: () => fmt(S.crossTotal) },
   { id: 'chainMem', label: 'Chain Memory', value: () => '×' + stat.chainMem.toFixed(2) + (S.sl.memory ? '' : ' (not bought)') },
   { id: 'playTime', label: 'Play time', value: () => Math.floor(S.playTime / 3600) + 'h ' + Math.floor(S.playTime / 60 % 60) + 'm' },
 ];

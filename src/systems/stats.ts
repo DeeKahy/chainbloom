@@ -1,5 +1,6 @@
 import { riftById } from '../content/rifts';
 import { chainMemoryMult, DILATION_BASE, DILATION_STEP } from '../content/singularity';
+import { BRIDGE_SPAN } from '../content/multiverse';
 import { S } from '../state/state';
 
 /** Derived numbers, recomputed from the save by recalc(). Never saved. */
@@ -97,7 +98,7 @@ export function recalc(): void {
   stat.pTwin = .04 * m.twin;
   stat.mirror = .25 * m.mirror;
   stat.melodyMult = m.melody ? 2 + m.melody : 1;
-  stat.portalSpan = 160 + 80 * m.bridge;
+  stat.portalSpan = BRIDGE_SPAN + 80 * m.bridge;
   stat.bExp = Math.min(1, .5 + .1 * m.tune);
   stat.threadMult = 1.5 ** m.weave;
 

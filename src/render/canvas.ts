@@ -30,7 +30,11 @@ export const views: View[] = [blankView(), blankView()];
 /** The current universe's field in world units (set by useWorld in sim/world.ts). */
 export const field = { W: 1000, H: 800, scale: 1 };
 
-/** Multiverse layout: whether B exists, whether both show side by side, and which one a phone shows. */
+/**
+ * Multiverse layout: whether B exists, and whether both show side by side (wide screens). On a
+ * narrow screen `focus` picks what shows: 0 both stacked (the default), 1 only A, 2 only B.
+ * The bridge sits on the edge the universes share: A's right edge when split, A's bottom otherwise.
+ */
 export const layout = { multi: false, split: false, focus: 0 };
 
 export const BG = '#06070d';
@@ -40,12 +44,14 @@ const SPLIT_MIN_W = 700;
 
 function computeViews(): void {
   const split = layout.multi && size.W >= SPLIT_MIN_W;
+  const stack = layout.multi && !split && layout.focus === 0;
   layout.split = split;
-  const gap = split ? 6 : 0;
+  const gap = split || stack ? 6 : 0;
   views.forEach((v, i) => {
     v.x = 0; v.y = 0; v.w = size.W; v.h = size.H;
     if (split) { v.w = (size.W - gap) / 2; v.x = i ? v.w + gap : 0; }
-    v.visible = split || (layout.multi ? i === layout.focus : i === 0);
+    if (stack) { v.h = (size.H - gap) / 2; v.y = i ? v.h + gap : 0; }
+    v.visible = split || stack || (layout.multi ? i === layout.focus - 1 : i === 0);
     v.scale = Math.sqrt(v.w * v.h / FIELD_AREA);
     v.W = v.w / v.scale; v.H = v.h / v.scale;
   });

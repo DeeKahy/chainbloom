@@ -2,13 +2,14 @@ import { onRefresh } from '../core/app';
 import { $, fmt, setClass, setHTML, setText } from '../core/util';
 import { DU, SU } from '../content/prestige';
 import { SL } from '../content/singularity';
-import { LAWS, TL } from '../content/multiverse';
+import { crossForLive, LAWS, TL } from '../content/multiverse';
 import { AUTO_NOVA_RIFT, RIFTS } from '../content/rifts';
 import { refreshPins } from './pins';
 import { STAT_ROWS, togglePin } from './statRows';
 import type { RiftDef } from '../content/types';
 import { exportSave, parseImport } from '../state/save';
 import { S } from '../state/state';
+import { stat } from '../systems/stats';
 import {
   colGain, COLLAPSE_MIN, collapseComplete, doCollapse, doNova, doSingularity, enterRift, importState, leaveRift, nextNovaAt,
   doMultiverse, mvGain, NOVA_MIN, novaGain, SING_MIN_LOG, singGain, singularityComplete, wipe,
@@ -184,7 +185,7 @@ export function buildMultiversePane(): void {
   const btn = $<HTMLButtonElement>('#mvBtn');
   btn.addEventListener('click', () => {
     if (!mvGain()) return;
-    if (!armed(btn, 'Click again: resets EVERYTHING but the Eternal Autobuyer')) return;
+    if (!armed(btn, 'Click again: resets everything but the automation and Star Chart')) return;
     doMultiverse();
   });
   // Laws: one button row per universe; data-u is the universe, data-law the law ('' = none)
@@ -200,14 +201,15 @@ export function buildMultiversePane(): void {
 export function refreshMultiversePane(): void {
   setText($('#mvCount'), fmt(S.threads));
   const g = mvGain();
-  const lg = Math.log10(1 + S.crossBest);
-  $('#mvBar').style.width = (g ? 100 : S.multiverses ? Math.min(100, lg / 3 * 100) : 0) + '%';
   const info = $('#mvInfo');
+  // the bar fills toward the next live Thread
+  const at = crossForLive(S.threadsLive, stat.threadMult), next = crossForLive(S.threadsLive + 1, stat.threadMult);
+  $('#mvBar').style.width = (S.multiverses ? Math.min(100, (S.crossTotal - at) / Math.max(1, next - at) * 100) : g ? 100 : 0) + '%';
+  const flow = S.multiverses ? `<br>Flowing in live: <b style="color:#7fd4ff">${fmt(S.threadsLive)} ❖</b> this cycle from <b>${fmt(S.crossTotal)}</b> cross-world pops. Next at ${fmt(next)}.` : '';
   if (S.rift) setText(info, 'The Multiverse is blocked while you are inside a Rift.');
   else if (!S.multiverses && !singularityComplete()) setText(info, 'Max every Singularity upgrade first.');
-  else if (S.multiverses && !S.singularities) setHTML(info, `Do a Singularity this cycle first. Best cross-world chain so far: <b>${fmt(S.crossBest)}</b> pops.`);
-  else if (g) setHTML(info, `Open the Multiverse now for <b style="color:#7fd4ff">+${fmt(g)} ❖</b>` + (S.multiverses ? ` (best cross-world chain: ${fmt(S.crossBest)} pops)` : ''));
-  else setText(info, `Best cross-world chain this cycle: ${fmt(S.crossBest)} pops`);
+  else if (g) setHTML(info, `Open the Multiverse now for <b style="color:#7fd4ff">+${fmt(g)} ❖</b>` + (S.multiverses ? ` (best cross-world chain: ${fmt(S.crossBest)} pops)` : '') + flow);
+  else setHTML(info, `Best cross-world chain this cycle: ${fmt(S.crossBest)} pops` + flow);
   $<HTMLButtonElement>('#mvBtn').disabled = !g;
 
   const owned = LAWS.filter(l => S.tl[l.upgrade]);

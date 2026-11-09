@@ -4,7 +4,7 @@ import { UP } from '../content/upgrades';
 import { SL } from '../content/singularity';
 import { TL } from '../content/multiverse';
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 export interface BoardNode {
   q: number;
@@ -61,6 +61,10 @@ export interface GameState {
   tl: Record<string, number>;
   /** Most pops a single chain made in the other universe this cycle. Sets the Thread gain. */
   crossBest: number;
+  /** All pops chains made in the other universe this cycle. Threads flow in live from it. */
+  crossTotal: number;
+  /** Threads already paid out live this cycle from crossTotal. */
+  threadsLive: number;
   /** Law of Physics chosen for universe A and B ('' = none). */
   laws: string[];
   /** Melody target: five digits, each a normal orb colour (0-2). */
@@ -91,7 +95,7 @@ export function fresh(): GameState {
     dm: 0, dmEver: 0, collapses: 0, dl: levels(DU), board: [], flux: 0, fluxEver: 0, pulseBank: 0,
     rift: 0, riftsDone: [], autoBuy: true,
     sing: 0, singEver: 0, singularities: 0, sl: levels(SL), cyclePeak: 0, autoStar: true, autoCol: false, colTime: 0,
-    threads: 0, threadsEver: 0, multiverses: 0, tl: levels(TL), crossBest: 0, laws: ['', ''], melody: '01201', autoDm: true,
+    threads: 0, threadsEver: 0, multiverses: 0, tl: levels(TL), crossBest: 0, crossTotal: 0, threadsLive: 0, laws: ['', ''], melody: '01201', autoDm: true,
     popped: 0, best: 0, saved: 0, lastRate: 0, mute: false, pinned: [], playTime: 0,
   };
 }
