@@ -80,8 +80,6 @@ void main() {
   float a;
   if (v_kind == 0.0) {
     // blast: ring (alpha v_col.a, width p0) plus the translucent disc inside it (alpha p1), one quad.
-    // p2 = 1 makes it a square (Law: Square Blasts).
-    if (v_p.z > 0.5) d = max(abs(v_lp.x), abs(v_lp.y));
     a = stroke(d - v_r, v_p.x) * v_col.a + clamp((v_r - d) / u_px + 0.5, 0.0, 1.0) * v_p.y;
     o = vec4(rgb * a, a);
     return;
@@ -354,7 +352,7 @@ export function renderFieldGL(v: View, shakeX: number, shakeY: number): void {
     const col = hsl(hue % 360, b.kind === BlastKind.Drone ? .7 : .65);
     const r = Math.max(.1, b.r);
     const lw = (b.kind === BlastKind.Volatile ? 4 : 2.4) * (1.4 - p * .6) * thick;
-    put(b.x, b.y, r, BLAST, col, Math.max(0, fade) * (b.kind === BlastKind.Crystal ? .4 : .85), lw, p < 1 ? .12 * (1 - p) : 0, b.sq ? 1 : 0);
+    put(b.x, b.y, r, BLAST, col, Math.max(0, fade) * (b.kind === BlastKind.Crystal ? .4 : .85), lw, p < 1 ? .12 * (1 - p) : 0);
   }
 
   const gold = rgbOf('#ffd34d');

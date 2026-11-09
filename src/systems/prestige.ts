@@ -68,14 +68,13 @@ function resetDarkLayer(): void {
 const MV_KEEPS = ['keepAuto', 'autoStar', 'autoCol', 'keepBoard'];
 
 /**
- * Thread upgrades a Big Bang keeps without Remembered Weave: the automation, Déjà Vu and the Laws
- * of Physics (they change how a universe plays rather than how strong it is).
+ * Thread upgrades a Big Bang keeps without Remembered Weave: the automation and Déjà Vu.
  */
-const BANG_KEEPS_TL = ['dmAuto', 'deja', 'lawSquare', 'lawFlip', 'lawQuick'];
+const BANG_KEEPS_TL = ['dmAuto', 'deja'];
 
 /**
  * Big Bang: the Loom, Knots, Pollen, Threads and every layer below go. Seeds and the garden layout,
- * the Laws, the automation and the records stay; Era upgrades keep more.
+ * the automation and the records stay; Era upgrades keep more.
  */
 function resetBangLayer(): void {
   S.loom.fill(0); S.knots = 0;

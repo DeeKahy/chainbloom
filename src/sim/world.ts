@@ -24,8 +24,8 @@ export const enum BlastKind { Normal = 0, Critical = 1, Volatile = 2, Crystal = 
 export interface Blast {
   x: number; y: number; R: number; r: number; depth: number; ch: Chain | null;
   age: number; dur: number; born: number; kind: BlastKind; done: boolean;
-  /** Square blast (Law: Square Blasts), and whether it already went through the bridge. */
-  sq: boolean; jumped: boolean;
+  /** Whether it already went through the bridge. */
+  jumped: boolean;
 }
 export interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; c: string; sz: number }
 export interface FloatText { x: number; y: number; t: string; size: number; life: number; max: number; c: string }
@@ -104,7 +104,6 @@ export const multiverseOn = (): boolean => S.multiverses > 0;
 /** The universes that are simulated right now. */
 export const activeWorlds = (): World[] => multiverseOn() ? worlds : [worlds[0]];
 const other = (w: World): World => worlds[1 - w.index];
-const lawOf = (w: World): string => S.laws[w.index] || '';
 
 // ---------- the bridge ----------
 /**
@@ -174,7 +173,6 @@ function payout(v: number, ch: Chain | null): void {
   if (stat.hole) d = Math.min(1, stat.dilation + (world.flareT > 0 ? stat.flareBonus : 0));
   if (world.index === 1) d *= stat.bExp;
   if (d < 1 && v > 1) v = v ** d;
-  if (lawOf(world) === 'quick') v *= .6;
   earn(v, ch);
 }
 
@@ -269,7 +267,7 @@ export function burst(x: number, y: number, c: string, n: number, sp: number, li
 
 export function addBlast(x: number, y: number, R: number, depth: number, ch: Chain | null, kind: BlastKind = BlastKind.Normal): void {
   world.blasts.push({ x, y, R, r: 0, depth, ch, age: 0, dur: .16 + R / 900, born: clock.T, kind, done: false,
-    sq: lawOf(world) === 'square', jumped: false });
+    jumped: false });
 }
 
 /**
@@ -477,7 +475,7 @@ function atBridge(b: Blast): boolean {
 /** Update the current universe (see useWorld). Quick Time passes a larger dt. */
 export function updateField(dt: number): void {
   const { W, H } = field;
-  const T = clock.T, law = lawOf(world), mv = multiverseOn();
+  const T = clock.T, mv = multiverseOn();
 
   // events from the other universe
   const ib = world.inbox;
@@ -511,15 +509,13 @@ export function updateField(dt: number): void {
     if (world.orbs.length < stat.cap) maybeEntangle(spawnOrb());
   }
 
-  // Gravity Flip: wells and the black hole push instead of pull for 10 s at a time
-  const gs = law === 'flip' && Math.floor(T / 10) % 2 ? -1 : 1;
 
   // wells
   const wells = world.wells;
   while (wells.length < stat.wells) wells.push({ x: rand(W * .2, W * .8), y: rand(H * .2, H * .8), vx: rand(-18, 18), vy: rand(-18, 18), a: 0, t: rand(.5, stat.wellOrbEvery) });
   if (wells.length > stat.wells) wells.length = stat.wells;
   for (const w of wells) {
-    w.x += w.vx * dt; w.y += w.vy * dt; w.a += dt * gs;
+    w.x += w.vx * dt; w.y += w.vy * dt; w.a += dt;
     if (w.x < 80 || w.x > W - 80) w.vx *= -1;
     if (w.y < 80 || w.y > H - 80) w.vy *= -1;
     w.x = Math.max(79, Math.min(W - 79, w.x)); w.y = Math.max(79, Math.min(H - 79, w.y));
@@ -537,7 +533,7 @@ export function updateField(dt: number): void {
 
   // black hole (layer 4)
   if (stat.hole) {
-    world.holeA += dt * (world.flareT > 0 ? 2.4 : .8) * gs;
+    world.holeA += dt * (world.flareT > 0 ? 2.4 : .8);
     if (world.flareT > 0) world.flareT = Math.max(0, world.flareT - dt);
   }
   const hx = W / 2, hy = H / 2;
@@ -559,7 +555,7 @@ export function updateField(dt: number): void {
     for (const w of wells) {
       const dx = w.x - o.x, dy = w.y - o.y, d = Math.hypot(dx, dy);
       if (d < 320 && d > 1) {
-        const f = 110 * (1 - d / 320) * dt * (d < 30 ? -.5 : 1) * gs;
+        const f = 110 * (1 - d / 320) * dt * (d < 30 ? -.5 : 1);
         o.vx += (dx / d * f) - (dy / d) * f * .55;
         o.vy += (dy / d * f) + (dx / d) * f * .55;
       }
@@ -568,7 +564,7 @@ export function updateField(dt: number): void {
       // a stronger, wider swirl than a well; the core pushes orbs back out so they orbit instead of vanishing
       const dx = hx - o.x, dy = hy - o.y, d = Math.hypot(dx, dy);
       if (d < HOLE_PULL && d > 1) {
-        const f = 150 * (1 - d / HOLE_PULL) * dt * (d < HOLE_CORE ? -1.4 : 1) * gs;
+        const f = 150 * (1 - d / HOLE_PULL) * dt * (d < HOLE_CORE ? -1.4 : 1);
         o.vx += (dx / d * f) - (dy / d) * f * .7;
         o.vy += (dy / d * f) + (dx / d) * f * .7;
       }
@@ -614,16 +610,9 @@ export function updateField(dt: number): void {
     const p = Math.min(1, b.age / b.dur);
     b.r = b.R * (1 - (1 - p) ** 3);
     if (b.done || S.gathering) continue; // the Stillness: blasts still fade out, but pop nothing
-    if (b.sq) {
-      // Law: Square Blasts. Same radius, but the reach is a square, so it covers the corners too.
-      near(grid, b.x, b.y, b.r + 9, o => {
-        if (!o.dead && o.born < b.born && Math.max(Math.abs(o.x - b.x), Math.abs(o.y - b.y)) < b.r + o.r) pop(o, b.depth, b.ch);
-      });
-    } else {
-      near(grid, b.x, b.y, b.r + 9, o => {
-        if (!o.dead && o.born < b.born && (o.x - b.x) ** 2 + (o.y - b.y) ** 2 < (b.r + o.r) ** 2) pop(o, b.depth, b.ch);
-      });
-    }
+    near(grid, b.x, b.y, b.r + 9, o => {
+      if (!o.dead && o.born < b.born && (o.x - b.x) ** 2 + (o.y - b.y) ** 2 < (b.r + o.r) ** 2) pop(o, b.depth, b.ch);
+    });
     if (world.crystals.length) near(cgrid, b.x, b.y, b.r, c => {
       if (c.state === 0 && (c.x - b.x) ** 2 + (c.y - b.y) ** 2 < b.r * b.r) shatter(c, b.depth, b.ch);
     });

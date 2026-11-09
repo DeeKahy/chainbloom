@@ -48,7 +48,6 @@ export interface CurrencyShopOptions {
  */
 function currencyCost(u: UpgradeDef, l: number, bal: number): [count: number, cost: number] {
   if (l >= u.max) return [0, 0];
-  if (u.free?.(S)) return [1, 0];
   const max = app.buyN === 'max';
   const want = max ? Infinity : +app.buyN;
   let n = 0, c = 0;
@@ -98,7 +97,7 @@ export function currencyShop(o: CurrencyShopOptions): () => void {
       const [n, cost] = currencyCost(u, l, bal);
       setClass(c.el, `up ${o.cls}` + (bal >= cost ? ' afford' : ''));
       setText(c.ds, u.desc(l, l + n, stat));
-      setText(c.cost, cost ? `${fmt(cost)} ${o.unit}` + (n > 1 ? `  (×${n})` : '') : 'FREE');
+      setText(c.cost, `${fmt(cost)} ${o.unit}` + (n > 1 ? `  (×${n})` : ''));
     }
   };
 }

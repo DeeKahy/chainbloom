@@ -1,6 +1,5 @@
 import { clock } from '../core/app';
 import { TAU } from '../core/util';
-import { LAWS } from '../content/multiverse';
 import { BlastKind, gate, HOLE_CORE, HOLE_FEED, multiverseOn, useWorld, WELL_GLOW, world, worlds, type World } from '../sim/world';
 import { S } from '../state/state';
 import { stat } from '../systems/stats';
@@ -153,7 +152,7 @@ function drawWorld2D(v: View): void {
     ctx.lineWidth = (b.kind === BlastKind.Volatile ? 4 : 2.4) * (1.4 - p * .6) * thick;
     const br = Math.max(.1, b.r);
     ctx.beginPath();
-    if (b.sq) ctx.rect(b.x - br, b.y - br, br * 2, br * 2); else ctx.arc(b.x, b.y, br, 0, TAU);
+    ctx.arc(b.x, b.y, br, 0, TAU);
     ctx.stroke();
     if (p < 1) {
       ctx.globalAlpha = .12 * (1 - p);
@@ -225,7 +224,7 @@ export function renderFieldWithGL(): void {
 
 /**
  * Across both universes: faint threads between entangled twins (only when both are on screen),
- * and a label naming each universe and its Law.
+ * and a label naming each universe.
  */
 function drawLinks(): void {
   if (!multiverseOn()) return;
@@ -243,9 +242,8 @@ function drawLinks(): void {
   }
   ctx.font = `600 11px ${FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
   for (const w of shownWorlds()) {
-    const law = LAWS.find(l => l.id === S.laws[w.index]);
     ctx.fillStyle = 'rgba(127,212,255,.55)';
-    ctx.fillText(`Universe ${w.index ? 'B' : 'A'}${law ? ' · ' + law.name : ''}`, w.view.x + 10, w.view.y + w.view.h - 8);
+    ctx.fillText(`Universe ${w.index ? 'B' : 'A'}`, w.view.x + 10, w.view.y + w.view.h - 8);
   }
 }
 /** Drones used shadowBlur every frame, which Firefox renders very slowly; draw the glowing drone once and stamp it. */

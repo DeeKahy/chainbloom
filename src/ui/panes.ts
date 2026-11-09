@@ -2,7 +2,7 @@ import { onRefresh } from '../core/app';
 import { $, fmt, setClass, setHTML, setText } from '../core/util';
 import { DU, SU } from '../content/prestige';
 import { SL } from '../content/singularity';
-import { crossForLive, LAWS, TL } from '../content/multiverse';
+import { crossForLive, TL } from '../content/multiverse';
 import { AUTO_NOVA_RIFT, RIFTS } from '../content/rifts';
 import { refreshPins } from './pins';
 import { STAT_ROWS, togglePin } from './statRows';
@@ -188,13 +188,6 @@ export function buildMultiversePane(): void {
     if (!armed(btn, 'Click again: resets everything but the automation and Star Chart')) return;
     doMultiverse();
   });
-  // Laws: one button row per universe; data-u is the universe, data-law the law ('' = none)
-  $('#lawBox').addEventListener('click', e => {
-    const b = (e.target as HTMLElement).closest<HTMLElement>('button[data-u]');
-    if (!b) return;
-    S.laws[+b.dataset.u!] = b.dataset.law!;
-    refreshMultiversePane();
-  });
   onRefresh(refreshMultiversePane);
 }
 
@@ -212,16 +205,6 @@ export function refreshMultiversePane(): void {
   else setHTML(info, `Best cross-world chain this cycle: ${fmt(S.crossBest)} pops` + flow);
   $<HTMLButtonElement>('#mvBtn').disabled = !g;
 
-  const owned = LAWS.filter(l => S.tl[l.upgrade]);
-  const showLaws = S.multiverses > 0 && owned.length > 0;
-  $('#lawCat').hidden = $('#lawBox').hidden = !showLaws;
-  if (showLaws) {
-    const row = (u: number) => `<div class="lawrow"><b>Universe ${u ? 'B' : 'A'}</b>` +
-      [{ id: '', name: 'None' }, ...owned].map(l => `<button data-u="${u}" data-law="${l.id}" class="${(S.laws[u] || '') === l.id ? 'on' : ''}">${l.name}</button>`).join('') + '</div>';
-    const cur = LAWS.find(l => l.id === S.laws[0]), curB = LAWS.find(l => l.id === S.laws[1]);
-    setHTML($('#lawBox'), row(0) + row(1) +
-      [cur, curB].filter((l, i, a) => l && a.indexOf(l) === i).map(l => `<b>${l!.name}:</b> ${l!.desc}`).join('<br>'));
-  }
   const b5 = $('#beyond5');
   b5.hidden = !S.multiverses;
   if (!b5.hidden) setHTML(b5, S.gardenOn ? 'Beyond: <b style="color:#7dffb0">the Garden is open.</b>'

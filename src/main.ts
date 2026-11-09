@@ -72,7 +72,7 @@ function frame(now: number): void {
   tickGlobal(dt);
   for (const w of activeWorlds()) {
     useWorld(w);
-    updateField(S.laws[w.index] === 'quick' ? dt * 1.5 : dt); // Law: Quick Time
+    updateField(dt);
   }
   useWorld(worlds[0]);
   const sim = performance.now() - t0;

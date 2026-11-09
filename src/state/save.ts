@@ -53,6 +53,12 @@ const MIGRATIONS: ((d: RawSave) => void)[] = [
       delete tl.lawRepel;
     }
   },
+  // 9 → 10: the Laws of Physics are gone entirely, with no refund.
+  d => {
+    delete d.laws;
+    const tl = d.tl as Record<string, number> | undefined;
+    if (tl) for (const id of ['lawSquare', 'lawFlip', 'lawQuick', 'lawRepel']) delete tl[id];
+  },
 ];
 
 /**

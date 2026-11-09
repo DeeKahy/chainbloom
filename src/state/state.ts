@@ -7,7 +7,7 @@ import { GL, type Bed, type Seed } from '../content/garden';
 import { LL, LOOM_MAX } from '../content/loom';
 import { EL } from '../content/bang';
 
-export const SAVE_VERSION = 9;
+export const SAVE_VERSION = 10;
 
 export interface BoardNode {
   q: number;
@@ -68,8 +68,6 @@ export interface GameState {
   crossTotal: number;
   /** Threads already paid out live this cycle from crossTotal. */
   threadsLive: number;
-  /** Law of Physics chosen for universe A and B ('' = none). */
-  laws: string[];
   /** Melody target: five digits, each a normal orb colour (0-2). */
   melody: string;
   autoDm: boolean;
@@ -130,7 +128,7 @@ export function fresh(): GameState {
     dm: 0, dmEver: 0, collapses: 0, dl: levels(DU), board: [], flux: 0, fluxEver: 0, pulseBank: 0,
     rift: 0, riftsDone: [], autoBuy: true,
     sing: 0, singEver: 0, singularities: 0, sl: levels(SL), cyclePeak: 0, autoStar: true, autoCol: false, colTime: 0,
-    threads: 0, threadsEver: 0, multiverses: 0, tl: levels(TL), crossBest: 0, crossTotal: 0, threadsLive: 0, laws: ['', ''], melody: '01201', autoDm: true, mvTime: 0, hopBest: 0,
+    threads: 0, threadsEver: 0, multiverses: 0, tl: levels(TL), crossBest: 0, crossTotal: 0, threadsLive: 0, melody: '01201', autoDm: true, mvTime: 0, hopBest: 0,
     gardenOn: false, garden: { seeds: [], beds: [], next: 1 }, pollen: 0, pollenEver: 0, gl: levels(GL), crosses: 0, potBest: 0, autoMv: true,
     loomOn: false, loom: new Array(LOOM_MAX * LOOM_MAX).fill(0), knots: 0, knotsEver: 0, ll: levels(LL), bestBead: 0, autoMerge: true,
     bangOn: false, eras: 0, erasEver: 0, bangs: 0, el: levels(EL), gathering: false,

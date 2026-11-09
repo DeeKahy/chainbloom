@@ -5,7 +5,7 @@ import type { UpgradeDef } from './types';
  * Layer 8: Big Bang → Eras ◈. Unlocked by a tier-6 bead on the Loom and 20 Knots ever.
  * The prestige is played, not clicked: during the Stillness nothing detonates and the field fills
  * far past its cap, then the Big Bang sets every orb off in one chain. Eras come from that chain's
- * length. It resets everything below except automation, Laws, seeds and the garden layout.
+ * length. It resets everything below except automation, seeds and the garden layout.
  */
 
 /** The Stillness holds this many times the usual orb cap: at most 1,800 a field, which a phone can still run. */
