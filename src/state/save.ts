@@ -28,6 +28,11 @@ const MIGRATIONS: ((d: RawSave) => void)[] = [
   d => {
     if (typeof d.autoStar !== 'boolean') d.autoStar = true;
   },
+  // 5 → 6: layer 5 (Multiverse). New fields start at their defaults.
+  d => {
+    if (!Array.isArray(d.laws)) d.laws = ['', ''];
+    if (typeof d.melody !== 'string') d.melody = '01201';
+  },
 ];
 
 /**
@@ -49,6 +54,7 @@ export function normalize(raw: unknown): GameState {
   out.st = Object.assign(fresh().st, d.st);
   out.dl = Object.assign(fresh().dl, d.dl);
   out.sl = Object.assign(fresh().sl, d.sl);
+  out.tl = Object.assign(fresh().tl, d.tl);
   out.version = newer ? (d.version as number) : SAVE_VERSION;
   return out;
 }

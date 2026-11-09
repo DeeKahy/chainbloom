@@ -2,8 +2,9 @@ import { DU, SU } from '../content/prestige';
 import type { NodeType } from '../content/types';
 import { UP } from '../content/upgrades';
 import { SL } from '../content/singularity';
+import { TL } from '../content/multiverse';
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 export interface BoardNode {
   q: number;
@@ -53,6 +54,18 @@ export interface GameState {
   /** Stardust Autobuyer toggle (Singularity upgrade). */
   autoStar: boolean;
   autoCol: boolean;
+  // layer 5: multiverse
+  threads: number;
+  threadsEver: number;
+  multiverses: number;
+  tl: Record<string, number>;
+  /** Most pops a single chain made in the other universe this cycle. Sets the Thread gain. */
+  crossBest: number;
+  /** Law of Physics chosen for universe A and B ('' = none). */
+  laws: string[];
+  /** Melody target: five digits, each a normal orb colour (0-2). */
+  melody: string;
+  autoDm: boolean;
   /** Seconds since the last Collapse, for Auto-Collapse. */
   colTime: number;
   // bookkeeping
@@ -78,6 +91,7 @@ export function fresh(): GameState {
     dm: 0, dmEver: 0, collapses: 0, dl: levels(DU), board: [], flux: 0, fluxEver: 0, pulseBank: 0,
     rift: 0, riftsDone: [], autoBuy: true,
     sing: 0, singEver: 0, singularities: 0, sl: levels(SL), cyclePeak: 0, autoStar: true, autoCol: false, colTime: 0,
+    threads: 0, threadsEver: 0, multiverses: 0, tl: levels(TL), crossBest: 0, laws: ['', ''], melody: '01201', autoDm: true,
     popped: 0, best: 0, saved: 0, lastRate: 0, mute: false, pinned: [], playTime: 0,
   };
 }
@@ -107,7 +121,7 @@ export function sanitizeState(): boolean {
   };
   const top = S as unknown as Record<string, unknown>;
   for (const k of Object.keys(top)) fix(top, k);
-  for (const m of [S.lv, S.st, S.dl, S.sl]) for (const k of Object.keys(m)) fix(m, k);
+  for (const m of [S.lv, S.st, S.dl, S.sl, S.tl]) for (const k of Object.keys(m)) fix(m, k);
   for (const n of S.board) fix(n as unknown as Record<string, unknown>, 'c');
   return ok;
 }

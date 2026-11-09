@@ -1,12 +1,14 @@
 import { app, onRefresh, type BuyAmount, type Tab } from '../core/app';
-import { $, $$, fmt, replayClass, setText } from '../core/util';
+import { $, $$, fmt, replayClass, setHTML, setText } from '../core/util';
 import { riftById } from '../content/rifts';
-import { hooks, world } from '../sim/world';
+import { hooks, multiverseOn, world } from '../sim/world';
+import { layout, setLayout } from '../render/canvas';
+import { NORMALS } from '../render/sprites';
 import { S } from '../state/state';
 import { rateAvg } from '../systems/economy';
-import { colGain, collapseComplete, novaGain, singGain } from '../systems/prestige';
+import { colGain, collapseComplete, mvGain, novaGain, singGain, singularityComplete } from '../systems/prestige';
 import { stat } from '../systems/stats';
-import { refreshCollapsePane, refreshNovaPane, refreshSingPane, refreshStatsPane } from './panes';
+import { refreshCollapsePane, refreshMultiversePane, refreshNovaPane, refreshSingPane, refreshStatsPane } from './panes';
 import { refreshPalette, setView } from './palette';
 import { refreshPins } from './pins';
 import { refreshRunShop } from './shop';
@@ -14,7 +16,7 @@ import { toast } from './toast';
 
 const el = {
   money: $('#money'), rate: $('#rate'), ready: $('#ready'), riftHud: $('#riftHud'), combo: $('#combo'),
-  novaTab: $('#novaTab'), colTab: $('#colTab'), singTab: $('#singTab'), dilHud: $('#dilHud'), viewBtns: $('#viewBtns'), autoBuyRow: $('#autoBuyRow'),
+  novaTab: $('#novaTab'), colTab: $('#colTab'), singTab: $('#singTab'), mvTab: $('#mvTab'), melodyHud: $('#melodyHud'), uniBtn: $('#uniBtn'), dilHud: $('#dilHud'), viewBtns: $('#viewBtns'), autoBuyRow: $('#autoBuyRow'),
   autoBuy: $<HTMLInputElement>('#autoBuy'), mute: $('#mute'), buyamt: $('#buyamt'),
 };
 
@@ -51,6 +53,7 @@ export function buildHud(): void {
   }));
   el.autoBuy.addEventListener('change', () => { S.autoBuy = el.autoBuy.checked; });
   el.mute.addEventListener('click', () => { S.mute = !S.mute; setMuteLabel(); });
+  el.uniBtn.addEventListener('click', () => setLayout(true, layout.focus ? 0 : 1));
   onRefresh(() => {
     el.autoBuy.checked = S.autoBuy;
     setMuteLabel();
@@ -59,7 +62,8 @@ export function buildHud(): void {
     if (S.runEarned < 2.5e5 && !S.novas) el.novaTab.hidden = true;
     if (S.starsCycle < 300 && !S.collapses) el.colTab.hidden = true;
     if (!collapseComplete() && !S.singularities) el.singTab.hidden = true;
-    if (el.novaTab.hidden && app.tab === 'nova' || el.colTab.hidden && app.tab === 'col' || el.singTab.hidden && app.tab === 'sing') selectTab('up');
+    if (!singularityComplete() && !S.multiverses) el.mvTab.hidden = true;
+    if (el.novaTab.hidden && app.tab === 'nova' || el.colTab.hidden && app.tab === 'col' || el.singTab.hidden && app.tab === 'sing' || el.mvTab.hidden && app.tab === 'mv') selectTab('up');
     refreshRunShop();
   });
 }
@@ -69,6 +73,7 @@ export function refreshVisibleTab(): void {
   if (app.tab === 'nova') refreshNovaPane();
   if (app.tab === 'col') refreshCollapsePane();
   if (app.tab === 'sing') refreshSingPane();
+  if (app.tab === 'mv') refreshMultiversePane();
   if (app.tab === 'stats') refreshStatsPane();
 }
 
@@ -106,6 +111,17 @@ export function tickHud(): void {
     if (S.playTime > 1) toast('Singularity unlocked', '#ffb35c');
   }
   el.viewBtns.hidden = !S.collapses;
+  if ((singularityComplete() || S.multiverses > 0) && el.mvTab.hidden) {
+    el.mvTab.hidden = false;
+    if (S.playTime > 1) toast('Multiverse unlocked', '#7fd4ff');
+  }
+  // Multiverse: the view buttons show from the start, and a phone gets a switch between universes
+  if (multiverseOn()) el.viewBtns.hidden = false;
+  el.uniBtn.hidden = !multiverseOn() || layout.split || app.view !== 'orbs';
+  setText(el.uniBtn, layout.focus ? '⇄ A' : '⇄ B');
+  // Melody: the five target colours
+  el.melodyHud.hidden = !S.tl.melody || app.view !== 'orbs';
+  if (!el.melodyHud.hidden) setHTML(el.melodyHud, '♫ ' + [...S.melody].map(n => `<i style="background:${NORMALS[+n].rgb};color:${NORMALS[+n].rgb}"></i>`).join(''));
 
   // dilation and the black hole's flare
   if (stat.hole) {
@@ -116,10 +132,11 @@ export function tickHud(): void {
     el.dilHud.classList.toggle('flare', flare);
   } else setText(el.dilHud, '');
 
-  const sg = singGain() > 0, cg = colGain() > 0;
-  setText(el.ready, sg ? '◉ Singularity ready ◉' : cg ? '◆ Collapse ready ◆' : '✦ Supernova ready ✦');
-  el.ready.style.color = sg ? '#ffb35c' : cg ? '#c9a6ff' : '';
-  el.ready.classList.toggle('on', sg || cg || novaGain() > 0);
+  const mg = mvGain() > 0, sg = singGain() > 0, cg = colGain() > 0;
+  setText(el.ready, mg ? '❖ Multiverse ready ❖' : sg ? '◉ Singularity ready ◉' : cg ? '◆ Collapse ready ◆' : '✦ Supernova ready ✦');
+  el.ready.style.color = mg ? '#7fd4ff' : sg ? '#ffb35c' : cg ? '#c9a6ff' : '';
+  el.ready.classList.toggle('on', mg || sg || cg || novaGain() > 0);
 }
 
 hooks.flare = () => toast('✸ Flare! Dilation eases for a while: chain hard now.', '#ffb35c');
+hooks.melody = bonus => toast(`♫ Melody! The chain paid ×${stat.melodyMult}: +$${fmt(bonus)}. A new melody plays next.`, '#7dffb0');

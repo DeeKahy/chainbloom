@@ -40,6 +40,13 @@ export interface Stats {
   /** Chain Memory multiplier on Singularity gain (1 until bought). */
   chainMem: number;
   singMult: number;
+  /** Layer 5: twin chance, mirror chance, melody payout (1 = off), bridge span, universe B exponent, Thread gain. */
+  pTwin: number;
+  mirror: number;
+  melodyMult: number;
+  portalSpan: number;
+  bExp: number;
+  threadMult: number;
   /** The black hole exists from the first Singularity on. */
   hole: boolean;
   /** Seconds before an orb decays; Infinity outside the Entropy Rift. */
@@ -85,6 +92,14 @@ export function recalc(): void {
   stat.massCap = 600;
   stat.chainMem = chainMemoryMult(S.best);
   stat.singMult = (g.memory ? stat.chainMem : 1) * 1.4 ** g.hawking;
+
+  const m = S.tl;
+  stat.pTwin = .04 * m.twin;
+  stat.mirror = .25 * m.mirror;
+  stat.melodyMult = m.melody ? 2 + m.melody : 1;
+  stat.portalSpan = 160 + 80 * m.bridge;
+  stat.bExp = Math.min(1, .5 + .1 * m.tune);
+  stat.threadMult = 1.5 ** m.weave;
 
   const rift = S.rift ? riftById(S.rift) : undefined;
   if (rift) {

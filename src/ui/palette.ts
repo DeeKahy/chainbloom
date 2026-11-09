@@ -21,7 +21,7 @@ export function buildPalette(): void {
     box.appendChild(b);
     palBtns.set(t, { el: b, n: b.querySelector<HTMLElement>('.n')!, c: b.querySelector<HTMLElement>('.c')! });
   }
-  $$<HTMLButtonElement>('#viewBtns button').forEach(b => b.addEventListener('click', () => setView(b.dataset.v as View)));
+  $$<HTMLButtonElement>('#viewBtns button[data-v]').forEach(b => b.addEventListener('click', () => setView(b.dataset.v as View)));
   onRefresh(() => { if (app.view === 'board') refreshPalette(); });
 }
 
@@ -58,7 +58,7 @@ export function setView(v: View): void {
   app.view = v;
   board.armed = null;
   document.body.classList.toggle('boardview', v === 'board');
-  $$('#viewBtns button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  $$('#viewBtns button[data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === v));
   $('#palette').hidden = v !== 'board';
   $('#combo').style.display = v === 'board' ? 'none' : '';
   clearCanvas();

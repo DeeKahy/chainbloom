@@ -1,20 +1,33 @@
 import { initAudio } from './audio';
 import { app } from './core/app';
-import { cv, field } from './render/canvas';
+import { cv } from './render/canvas';
 import { board, boardClick, inBoard, pixHex } from './sim/board';
-import { detonateAt } from './sim/world';
+import { detonateAt, multiverseOn, useWorld, worlds } from './sim/world';
 
 const local = (e: PointerEvent): [number, number] => {
   const r = cv.getBoundingClientRect();
   return [e.clientX - r.left, e.clientY - r.top];
 };
 
+/** A click on the orb field detonates in whichever universe's rectangle it landed in. */
+function detonateOnScreen(x: number, y: number): void {
+  for (const w of worlds) {
+    const v = w.view;
+    if (!v.visible || (w.index && !multiverseOn())) continue;
+    if (x < v.x || x > v.x + v.w || y < v.y || y > v.y + v.h) continue;
+    useWorld(w);
+    detonateAt((x - v.x) / v.scale, (y - v.y) / v.scale);
+    useWorld(worlds[0]);
+    return;
+  }
+}
+
 export function bindInput(): void {
   cv.addEventListener('pointerdown', e => {
     initAudio();
     const [x, y] = local(e);
     if (app.view === 'board') boardClick(x, y, e.pointerType !== 'mouse');
-    else detonateAt(x / field.scale, y / field.scale);
+    else detonateOnScreen(x, y);
   });
   cv.addEventListener('pointermove', e => {
     if (app.view !== 'board' || e.pointerType !== 'mouse') return;

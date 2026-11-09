@@ -1,6 +1,6 @@
 /** UI-level state shared between modules (not saved). */
 export type View = 'orbs' | 'board';
-export type Tab = 'up' | 'nova' | 'col' | 'sing' | 'stats';
+export type Tab = 'up' | 'nova' | 'col' | 'sing' | 'mv' | 'stats';
 export type BuyAmount = '1' | '10' | 'max';
 
 export const app = {

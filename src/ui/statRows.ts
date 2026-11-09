@@ -1,6 +1,6 @@
 import { fmt } from '../core/util';
 import { RIFTS } from '../content/rifts';
-import { world } from '../sim/world';
+import { shared, world } from '../sim/world';
 import { S } from '../state/state';
 import { stat } from '../systems/stats';
 
@@ -12,7 +12,7 @@ export interface StatRow {
 }
 
 const lastChain = (): string => {
-  const c = world.lastChain;
+  const c = shared.lastChain;
   return c.count ? `${fmt(c.count)} pops · depth ${c.depth} · $${fmt(c.total)}` : '-';
 };
 
@@ -40,6 +40,9 @@ export const STAT_ROWS: StatRow[] = [
   { id: 'cyclePeak', label: 'Best run this cycle', value: () => '$' + fmt(S.cyclePeak) },
   { id: 'dilation', label: 'Dilation', value: () => stat.hole ? '^' + Math.min(1, stat.dilation + (world.flareT > 0 ? stat.flareBonus : 0)).toFixed(2) : 'none' },
   { id: 'mass', label: 'Black hole mass', value: () => stat.hole ? Math.floor(world.mass / stat.massCap * 100) + '%' : '-' },
+  { id: 'multiverses', label: 'Multiverses', value: () => String(S.multiverses) },
+  { id: 'threadsEver', label: 'Threads earned', value: () => fmt(S.threadsEver) },
+  { id: 'crossBest', label: 'Best cross-world chain', value: () => fmt(S.crossBest) + ' pops' },
   { id: 'chainMem', label: 'Chain Memory', value: () => '×' + stat.chainMem.toFixed(2) + (S.sl.memory ? '' : ' (not bought)') },
   { id: 'playTime', label: 'Play time', value: () => Math.floor(S.playTime / 3600) + 'h ' + Math.floor(S.playTime / 60 % 60) + 'm' },
 ];

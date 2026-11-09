@@ -1,7 +1,7 @@
 import { app, clock } from '../core/app';
 import type { RunUpgradeDef, UpgradeDef } from '../content/types';
 import { UP } from '../content/upgrades';
-import { SU } from '../content/prestige';
+import { DU, SU } from '../content/prestige';
 import { S } from '../state/state';
 import { recalc, stat } from './stats';
 
@@ -16,6 +16,12 @@ export interface Chain {
   /** Started by a drone or Instability rather than a click. Used for offline earnings. */
   auto: boolean;
   over?: boolean;
+  /** Universe it started in, and pops it made in the other universe (layer 5: Threads come from these). */
+  home: number;
+  cross: number;
+  /** Melody: colours of the latest normal orbs popped, and whether they matched the target. */
+  notes: string;
+  sang: boolean;
 }
 
 /** Rolling 5-second money/sec averages: all income, and income from automation only. */
@@ -120,6 +126,23 @@ export function autoBuyStardust(): void {
     if (!best || S.stardust < bc) break;
     S.stardust -= bc;
     S.st[best.id]++;
+    recalc();
+  }
+}
+
+/** Dark Matter Autobuyer (Multiverse upgrade): repeatedly buys the cheapest Dark Matter upgrade. */
+export function autoBuyDark(): void {
+  for (let i = 0; i < 40; i++) {
+    let best: UpgradeDef | null = null, bc = Infinity;
+    for (const u of DU) {
+      const l = S.dl[u.id];
+      if (l >= u.max) continue;
+      const c = Math.ceil(u.base * u.g ** l);
+      if (c < bc) { bc = c; best = u; }
+    }
+    if (!best || S.dm < bc) break;
+    S.dm -= bc;
+    S.dl[best.id]++;
     recalc();
   }
 }

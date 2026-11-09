@@ -4,20 +4,20 @@ import { $, fmt } from './core/util';
 import { bindInput } from './input';
 import { renderBoard } from './render/board';
 import { resize } from './render/canvas';
-import { gfx, glCv, clearCanvas } from './render/canvas';
+import { gfx, glCv, clearCanvas, setLayout } from './render/canvas';
 import { renderField, renderFieldWithGL } from './render/field';
 import { initFieldGL } from './render/fieldGL';
 import { rebuildBoardMap, updateBoard } from './sim/board';
-import { spawnOrb, updateField, world } from './sim/world';
+import { activeWorlds, multiverseOn, spawnOrb, tickGlobal, updateField, useWorld, world, worlds } from './sim/world';
 import { load, save } from './state/save';
 import { S, sanitizeState } from './state/state';
-import { autoBuy, autoBuyStardust, autoRateAvg } from './systems/economy';
+import { autoBuy, autoBuyDark, autoBuyStardust, autoRateAvg } from './systems/economy';
 import { applyOfflineEarnings, checkRiftGoal, maybeAutoNova, tickPrestige } from './systems/prestige';
 import { recalc } from './systems/stats';
 import { buildHud, frameHud, tickHud } from './ui/hud';
 import { buildPalette } from './ui/palette';
 import { buildPins } from './ui/pins';
-import { buildCollapsePane, buildNovaPane, buildSingPane, buildStatsPane } from './ui/panes';
+import { buildCollapsePane, buildMultiversePane, buildNovaPane, buildSingPane, buildStatsPane } from './ui/panes';
 import { buildRunShop } from './ui/shop';
 import { toast } from './ui/toast';
 
@@ -31,6 +31,7 @@ gfx.gl = initFieldGL(() => {
   clearCanvas();
 });
 if (!gfx.gl) glCv.style.display = 'none';
+setLayout(multiverseOn());
 resize();
 new ResizeObserver(resize).observe($('#stage'));
 
@@ -38,6 +39,7 @@ buildRunShop($('#pane-up'), () => tickHud());
 buildNovaPane();
 buildCollapsePane();
 buildSingPane();
+buildMultiversePane();
 buildStatsPane();
 buildPalette();
 buildPins();
@@ -62,7 +64,12 @@ function frame(now: number): void {
   const dt = Math.min(.05, (now - last) / 1000);
   last = now;
 
-  updateField(dt);
+  tickGlobal(dt);
+  for (const w of activeWorlds()) {
+    useWorld(w);
+    updateField(S.laws[w.index] === 'quick' ? dt * 1.5 : dt); // Law: Quick Time
+  }
+  useWorld(worlds[0]);
   updateBoard(dt);
   if (app.view === 'board') renderBoard(); else if (gfx.gl) renderFieldWithGL(); else renderField();
   frameHud(dt);
@@ -73,6 +80,8 @@ function frame(now: number): void {
     recalc();
     if (S.dl.auto && S.autoBuy) autoBuy();
     if (S.sl.autoStar && S.autoStar) autoBuyStardust();
+    if (S.tl.dmAuto && S.autoDm) autoBuyDark();
+    setLayout(multiverseOn());
     sanitizeState();
     if (S.money >= Number.MAX_VALUE && !capWarned) { capWarned = true; toast('Money hit the number limit (1.8e308). It stays there for now.', '#ff5a6e'); }
     maybeAutoNova();
@@ -88,7 +97,7 @@ window.addEventListener('beforeunload', () => save(autoRateAvg()));
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(autoRateAvg()); });
 
 // Debug handle for the browser console.
-const debug = { S, recalc, world, gfx, clearCanvas, renderField, renderFieldWithGL, /** Freeze the loop (for comparing renderers). */ paused: false };
+const debug = { S, recalc, world, worlds, gfx, clearCanvas, renderField, renderFieldWithGL, /** Freeze the loop (for comparing renderers). */ paused: false };
 (window as unknown as Record<string, unknown>).__cb = debug;
 
 requestAnimationFrame(frame);

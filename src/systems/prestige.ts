@@ -3,13 +3,14 @@ import { refreshAll } from '../core/app';
 import { fmt } from '../core/util';
 import { DU, memoryStardust, seedMoney, SU } from '../content/prestige';
 import { SL } from '../content/singularity';
+import { sparkDM } from '../content/multiverse';
 import { riftById, RIFTS } from '../content/rifts';
 import type { RiftDef, UpgradeDef } from '../content/types';
 import { UP } from '../content/upgrades';
 import { field } from '../render/canvas';
 import { colorOf } from '../render/sprites';
 import { clearBoardFx, rebuildBoardMap } from '../sim/board';
-import { addBlast, BlastKind, burst, clearAll, clearRun, screenFlash, world } from '../sim/world';
+import { addBlast, BlastKind, burst, clearAll, clearHoles, clearRun, newMelody, screenFlash, world } from '../sim/world';
 import { clearSave, resumeSaving, save } from '../state/save';
 import { fresh, replaceState, S, type GameState } from '../state/state';
 import { toast } from '../ui/toast';
@@ -49,8 +50,20 @@ function resetDarkLayer(): void {
   S.rift = 0;
   S.colTime = 0;
   S.cyclePeak = 0;
-  world.mass = 0; world.flareT = 0;
+  clearHoles();
   resetStardustLayer(); // after the DU reset, so Nebula Memory gives no Stardust
+}
+
+/** Multiverse: everything below goes, except the Eternal Autobuyer (and Rift seals with Déjà Vu). */
+function resetSingularityLayer(): void {
+  const eternal = S.sl.keepAuto;
+  for (const u of SL) S.sl[u.id] = 0;
+  S.sl.keepAuto = eternal;
+  S.sing = 0; S.singularities = 0;
+  resetDarkLayer(); // also the Constellation, Stardust and the run; keeps the Autobuyer via keepAuto
+  if (!S.tl.deja) S.riftsDone = [];
+  S.dm = sparkDM(S.tl.spark);
+  S.crossBest = 0;
 }
 
 // ---------- gains ----------
@@ -72,6 +85,19 @@ export const collapseComplete = (): boolean =>
 
 /** Gate for layer 5 (not built yet): every Singularity upgrade maxed. */
 export const singularityComplete = (): boolean => SL.every(u => S.sl[u.id] >= u.max);
+
+/**
+ * Threads ❖ from the best cross-world chain this cycle (pops it made in the other universe):
+ * log10(1 + pops)², so ~9 at 1K, 16 at 10K, 25 at 100K, times Weaving. The first Multiverse gives
+ * a flat 10 (there is no universe B to cross into yet). Later ones also need a Singularity in the
+ * cycle, so each one is a full climb through every layer.
+ */
+export function mvGain(): number {
+  if (S.rift) return 0;
+  if (!S.multiverses) return singularityComplete() ? 10 : 0;
+  if (!S.singularities) return 0;
+  return Math.floor(Math.log10(1 + S.crossBest) ** 2 * stat.threadMult);
+}
 
 /** Money (as a power of ten) the cycle must peak at before a Singularity gives anything. */
 export const SING_MIN_LOG = 30;
@@ -171,6 +197,27 @@ export function doSingularity(): void {
   initAudio(); tone(50, 3, .2, 'sawtooth', 20); tone(880, 2.5, .08, 'sine', 55); tone(220, 2, .1, 'triangle', 1760);
   toast(`Singularity! +${fmt(g)} ◉`, '#ffb35c');
   if (first) setTimeout(() => toast('A black hole sits at the centre now. Pop orbs near it to fill its mass, then chain hard during the flare.', '#ffb35c'), 1400);
+  refreshAll();
+  save(autoRateAvg());
+}
+
+// ---------- Multiverse (layer 5) ----------
+export function doMultiverse(): void {
+  const g = mvGain();
+  if (!g) return;
+  const first = !S.multiverses;
+  const { W, H } = field;
+  for (const o of world.orbs) burst(o.x, o.y, '#7fd4ff', 5, 600, 2);
+  resetSingularityLayer();
+  S.threads += g; S.threadsEver += g; S.multiverses++;
+  if (first) S.melody = newMelody();
+  recalc();
+  for (let i = 0; i < 10; i++) addBlast(W / 2, H / 2, Math.max(W, H) * (.1 + i * .1), 99, null, BlastKind.Mirror);
+  screenFlash('190,230,255', 1);
+  world.shake = 20;
+  initAudio(); tone(40, 3.5, .2, 'sine', 160); tone(1320, 2.5, .06, 'triangle', 330); tone(660, 3, .08, 'sine', 990);
+  toast(`Multiverse! +${fmt(g)} ❖ Threads`, '#7fd4ff');
+  if (first) setTimeout(() => toast('A second universe opened beside this one. Chains that reach the bridge carry on over there.', '#7fd4ff'), 1500);
   refreshAll();
   save(autoRateAvg());
 }

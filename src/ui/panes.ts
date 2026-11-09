@@ -2,6 +2,7 @@ import { onRefresh } from '../core/app';
 import { $, fmt, setClass, setHTML, setText } from '../core/util';
 import { DU, SU } from '../content/prestige';
 import { SL } from '../content/singularity';
+import { LAWS, TL } from '../content/multiverse';
 import { AUTO_NOVA_RIFT, RIFTS } from '../content/rifts';
 import { refreshPins } from './pins';
 import { STAT_ROWS, togglePin } from './statRows';
@@ -10,7 +11,7 @@ import { exportSave, parseImport } from '../state/save';
 import { S } from '../state/state';
 import {
   colGain, COLLAPSE_MIN, collapseComplete, doCollapse, doNova, doSingularity, enterRift, importState, leaveRift, nextNovaAt,
-  NOVA_MIN, novaGain, SING_MIN_LOG, singGain, singularityComplete, wipe,
+  doMultiverse, mvGain, NOVA_MIN, novaGain, SING_MIN_LOG, singGain, singularityComplete, wipe,
 } from '../systems/prestige';
 import { currencyShop, refreshRunShop } from './shop';
 import { armed, toast } from './toast';
@@ -87,6 +88,7 @@ export function buildCollapsePane(): void {
     rl.appendChild(d);
   }
   $<HTMLInputElement>('#autoCol').addEventListener('change', e => { S.autoCol = (e.target as HTMLInputElement).checked; });
+  $<HTMLInputElement>('#autoDm').addEventListener('change', e => { S.autoDm = (e.target as HTMLInputElement).checked; });
   const colBtn = $<HTMLButtonElement>('#colBtn');
   colBtn.addEventListener('click', () => {
     if (!colGain()) return;
@@ -103,6 +105,8 @@ export function refreshCollapsePane(): void {
   setHTML($('#colInfo'), S.rift ? 'Collapse is blocked while you are inside a Rift.' :
     g ? `Collapse now for <b style="color:#c9a6ff">+${fmt(g)} ◆</b>` : `${fmt(S.starsCycle)} / ${fmt(COLLAPSE_MIN)} Stardust earned since last Collapse`);
   $<HTMLButtonElement>('#colBtn').disabled = !g;
+  $('#autoDmRow').hidden = !S.tl.dmAuto;
+  $<HTMLInputElement>('#autoDm').checked = S.autoDm;
   $('#autoColRow').hidden = !S.sl.autoCol;
   $<HTMLInputElement>('#autoCol').checked = S.autoCol;
   refreshDarkShop();
@@ -161,10 +165,65 @@ export function refreshSingPane(): void {
   if (!$('#beyond').hidden) {
     const maxed = SL.filter(u => S.sl[u.id] >= u.max).length;
     setHTML($('#beyond'), singularityComplete()
-      ? 'Beyond the horizon: <b>???</b> Every Singularity upgrade is maxed. The next layer is coming in a future update.'
+      ? 'Beyond the horizon: <b style="color:#7fd4ff">every Singularity upgrade is maxed.</b> The Multiverse tab is open.'
       : `Beyond the horizon: <b>???</b> Max every Singularity upgrade (${maxed} / ${SL.length}).`);
   }
   refreshSingShop();
+}
+
+// ---------- Multiverse pane (layer 5) ----------
+let refreshThreadShop = (): void => {};
+
+export function buildMultiversePane(): void {
+  refreshThreadShop = currencyShop({
+    box: $('#tlList'), defs: TL, levels: () => S.tl,
+    balance: () => S.threads, spend: n => { S.threads -= n; },
+    cls: 'mvc', unit: '❖', sound: [260, .6, 1560],
+    onBuy: () => refreshMultiversePane(),
+  });
+  const btn = $<HTMLButtonElement>('#mvBtn');
+  btn.addEventListener('click', () => {
+    if (!mvGain()) return;
+    if (!armed(btn, 'Click again: resets EVERYTHING but the Eternal Autobuyer')) return;
+    doMultiverse();
+  });
+  // Laws: one button row per universe; data-u is the universe, data-law the law ('' = none)
+  $('#lawBox').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('button[data-u]');
+    if (!b) return;
+    S.laws[+b.dataset.u!] = b.dataset.law!;
+    refreshMultiversePane();
+  });
+  onRefresh(refreshMultiversePane);
+}
+
+export function refreshMultiversePane(): void {
+  setText($('#mvCount'), fmt(S.threads));
+  const g = mvGain();
+  const lg = Math.log10(1 + S.crossBest);
+  $('#mvBar').style.width = (g ? 100 : S.multiverses ? Math.min(100, lg / 3 * 100) : 0) + '%';
+  const info = $('#mvInfo');
+  if (S.rift) setText(info, 'The Multiverse is blocked while you are inside a Rift.');
+  else if (!S.multiverses && !singularityComplete()) setText(info, 'Max every Singularity upgrade first.');
+  else if (S.multiverses && !S.singularities) setHTML(info, `Do a Singularity this cycle first. Best cross-world chain so far: <b>${fmt(S.crossBest)}</b> pops.`);
+  else if (g) setHTML(info, `Open the Multiverse now for <b style="color:#7fd4ff">+${fmt(g)} ❖</b>` + (S.multiverses ? ` (best cross-world chain: ${fmt(S.crossBest)} pops)` : ''));
+  else setText(info, `Best cross-world chain this cycle: ${fmt(S.crossBest)} pops`);
+  $<HTMLButtonElement>('#mvBtn').disabled = !g;
+
+  const owned = LAWS.filter(l => S.tl[l.upgrade]);
+  const showLaws = S.multiverses > 0 && owned.length > 0;
+  $('#lawCat').hidden = $('#lawBox').hidden = !showLaws;
+  if (showLaws) {
+    const row = (u: number) => `<div class="lawrow"><b>Universe ${u ? 'B' : 'A'}</b>` +
+      [{ id: '', name: 'None' }, ...owned].map(l => `<button data-u="${u}" data-law="${l.id}" class="${(S.laws[u] || '') === l.id ? 'on' : ''}">${l.name}</button>`).join('') + '</div>';
+    const cur = LAWS.find(l => l.id === S.laws[0]), curB = LAWS.find(l => l.id === S.laws[1]);
+    setHTML($('#lawBox'), row(0) + row(1) +
+      [cur, curB].filter((l, i, a) => l && a.indexOf(l) === i).map(l => `<b>${l!.name}:</b> ${l!.desc}`).join('<br>'));
+  }
+  const b5 = $('#beyond5');
+  b5.hidden = !S.multiverses;
+  if (!b5.hidden) setHTML(b5, `Beyond: <b>???</b> Max every Multiverse upgrade (${TL.filter(u => S.tl[u.id] >= u.max).length} / ${TL.length}).`);
+  refreshThreadShop();
 }
 
 // ---------- Stats pane ----------

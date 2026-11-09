@@ -1,7 +1,7 @@
 import { clock } from '../core/app';
-import { BlastKind, HOLE_CORE, HOLE_FEED, world, WELL_GLOW } from '../sim/world';
+import { BlastKind, HOLE_CORE, HOLE_FEED, multiverseOn, world, WELL_GLOW } from '../sim/world';
 import { stat } from '../systems/stats';
-import { field, glCv, size } from './canvas';
+import { field, glCv, layoutChanged, size, type View } from './canvas';
 import { colorOf, CRY, WHITE } from './sprites';
 
 /**
@@ -74,7 +74,9 @@ void main() {
   vec3 rgb = v_col.rgb;
   float a;
   if (v_kind == 0.0) {
-    // blast: ring (alpha v_col.a, width p0) plus the translucent disc inside it (alpha p1), one quad
+    // blast: ring (alpha v_col.a, width p0) plus the translucent disc inside it (alpha p1), one quad.
+    // p2 = 1 makes it a square (Law: Square Blasts).
+    if (v_p.z > 0.5) d = max(abs(v_lp.x), abs(v_lp.y));
     a = stroke(d - v_r, v_p.x) * v_col.a + clamp((v_r - d) / u_px + 0.5, 0.0, 1.0) * v_p.y;
     o = vec4(rgb * a, a);
     return;
@@ -261,17 +263,29 @@ function put(x: number, y: number, r: number, kind: number, c: readonly number[]
 
 const NONE = [0, 0, 0] as const;
 
-/** Draw the orb field. `shake` is the same random offset the 2D overlay uses this frame. */
-export function renderFieldGL(shakeX: number, shakeY: number): void {
-  const { scale } = field, T = clock.T;
+let lastLayout = -1;
+
+/**
+ * Draw the current universe (see useWorld) into its view's rectangle. `shake` is the same random
+ * offset the 2D overlay uses this frame. Each universe keeps its own trails: the fade and every
+ * draw are clipped to its rectangle.
+ */
+export function renderFieldGL(v: View, shakeX: number, shakeY: number): void {
+  const { scale } = field, T = clock.T, DPR = size.DPR;
   const thick = Math.max(1, .7 / scale);
   const minOrb = 16 / scale;
-  if (glCv.width !== lastW || glCv.height !== lastH) {
-    lastW = glCv.width; lastH = glCv.height;
+  if (glCv.width !== lastW || glCv.height !== lastH || layoutChanged.n !== lastLayout) {
+    lastW = glCv.width; lastH = glCv.height; lastLayout = layoutChanged.n;
+    gl.disable(gl.SCISSOR_TEST);
     gl.viewport(0, 0, lastW, lastH);
     gl.clearColor(6 / 255, 7 / 255, 13 / 255, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
   }
+  // this universe's rectangle, in device pixels from the bottom left
+  const vx = Math.round(v.x * DPR), vy = Math.round((size.H - v.y - v.h) * DPR), vw = Math.round(v.w * DPR), vh = Math.round(v.h * DPR);
+  gl.viewport(vx, vy, vw, vh);
+  gl.enable(gl.SCISSOR_TEST);
+  gl.scissor(vx, vy, vw, vh);
   gl.enable(gl.BLEND);
 
   // trails
@@ -301,21 +315,25 @@ export function renderFieldGL(shakeX: number, shakeY: number): void {
     }
   }
 
+  const twin = rgbOf('#c9a6ff');
   for (const o of world.orbs) {
     const grow = Math.min(1, (T - o.born) * 4);
     let s = Math.max(o.r * 3.6, minOrb) * grow, look = colorOf(o);
     if (o.crit) { s *= 1 + (.7 - o.crit) * .9; if ((o.crit * 20 | 0) % 2) look = WHITE; }
     if (o.type === 1) s *= 1 + .08 * Math.sin(T * 6 + o.x);
     put(o.x, o.y, s / 2, ORB, rgbOf(look.rgb), 1);
+    // entangled orbs wear a thin violet ring
+    if (o.twin) put(o.x, o.y, s * .42, BLAST, twin, .6 + .25 * Math.sin(T * 5 + o.x), 1.2 * thick);
   }
 
   for (const b of world.blasts) {
     const p = Math.min(1, b.age / b.dur), fade = b.age > b.dur ? 1 - (b.age - b.dur) / .35 : 1;
-    const hue = b.kind === BlastKind.Volatile ? 350 : b.kind === BlastKind.Crystal ? 195 : b.kind === BlastKind.Drone ? 45 : 190 + b.depth * 28;
+    const hue = b.kind === BlastKind.Volatile ? 350 : b.kind === BlastKind.Crystal ? 195 : b.kind === BlastKind.Drone ? 45
+      : b.kind === BlastKind.Mirror ? 275 : 190 + b.depth * 28;
     const col = hsl(hue % 360, b.kind === BlastKind.Drone ? .7 : .65);
     const r = Math.max(.1, b.r);
     const lw = (b.kind === BlastKind.Volatile ? 4 : 2.4) * (1.4 - p * .6) * thick;
-    put(b.x, b.y, r, BLAST, col, Math.max(0, fade) * (b.kind === BlastKind.Crystal ? .4 : .85), lw, p < 1 ? .12 * (1 - p) : 0);
+    put(b.x, b.y, r, BLAST, col, Math.max(0, fade) * (b.kind === BlastKind.Crystal ? .4 : .85), lw, p < 1 ? .12 * (1 - p) : 0, b.sq ? 1 : 0);
   }
 
   const gold = rgbOf('#ffd34d');
@@ -323,12 +341,20 @@ export function renderFieldGL(shakeX: number, shakeY: number): void {
 
   for (const p of world.parts) put(p.x, p.y, p.sz * thick / 2, SQUARE, rgbOf(p.c), p.life / p.max);
 
+  // the bridge: a glowing gate on the edge facing the other universe
+  if (multiverseOn()) {
+    const x = world.index === 0 ? field.W - 2 : 2, y0 = field.H / 2 - stat.portalSpan / 2, y1 = field.H / 2 + stat.portalSpan / 2;
+    const glow = .5 + .2 * Math.sin(T * 3) + .6 * world.portalFlash;
+    put(x, y0, 0, SEGMENT, rgbOf('#7fd4ff'), glow * .35, x, y1, 14 * thick);
+    put(x, y0, 0, SEGMENT, rgbOf('#e6f7ff'), glow, x, y1, 3 * thick);
+  }
+
   const use = (p: WebGLProgram, u: Uniforms): void => {
     gl.useProgram(p);
-    gl.uniform2f(u.res, size.W, size.H);
+    gl.uniform2f(u.res, v.w, v.h);
     gl.uniform1f(u.scale, scale);
     gl.uniform2f(u.shake, shakeX, shakeY);
-    gl.uniform1f(u.px, 1 / (scale * size.DPR));
+    gl.uniform1f(u.px, 1 / (scale * DPR));
   };
   gl.bindVertexArray(vao);
   gl.bindBuffer(gl.ARRAY_BUFFER, instBuf);
@@ -348,3 +374,4 @@ export function renderFieldGL(shakeX: number, shakeY: number): void {
   }
   gl.bindVertexArray(null);
 }
+

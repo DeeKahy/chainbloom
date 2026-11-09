@@ -1,9 +1,10 @@
 import { clock } from '../core/app';
 import { TAU } from '../core/util';
-import { world, BlastKind, HOLE_CORE, HOLE_FEED, WELL_GLOW } from '../sim/world';
+import { LAWS } from '../content/multiverse';
+import { BlastKind, HOLE_CORE, HOLE_FEED, multiverseOn, useWorld, WELL_GLOW, world, worlds, type World } from '../sim/world';
 import { S } from '../state/state';
 import { stat } from '../systems/stats';
-import { ctx, field, size } from './canvas';
+import { ctx, field, layout, size, type View } from './canvas';
 import { colorOf, CRY, WHITE } from './sprites';
 import { renderFieldGL } from './fieldGL';
 
@@ -12,6 +13,7 @@ const FONT = 'ui-sans-serif,system-ui,sans-serif';
 /** Smallest on-screen orb sprite in CSS pixels, so orbs stay visible on a phone. */
 const MIN_ORB_PX = 16;
 
+/** Full-canvas flash (the Constellation board). */
 export function drawFlash(): void {
   if (world.flash > 0) {
     ctx.globalAlpha = 1;
@@ -20,8 +22,33 @@ export function drawFlash(): void {
   }
 }
 
-/** Draws in world units (the simulation's coordinates) under one scale transform. */
+/** The universes on screen right now (B only from the first Multiverse on). */
+const shownWorlds = (): World[] => worlds.filter(w => w.view.visible && (w.index === 0 || multiverseOn()));
+
+function flashIn(v: View): void {
+  if (world.flash <= 0) return;
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = `rgba(${world.flashCol},${world.flash})`;
+  ctx.fillRect(v.x, v.y, v.w, v.h);
+}
+
+/** Canvas 2D fallback: each universe in its rectangle, in world units under one scale transform. */
 export function renderField(): void {
+  for (const w of shownWorlds()) {
+    useWorld(w);
+    const v = w.view;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(v.x, v.y, v.w, v.h); ctx.clip();
+    ctx.translate(v.x, v.y);
+    drawWorld2D(v);
+    ctx.restore();
+    flashIn(v);
+  }
+  useWorld(worlds[0]);
+  drawLinks();
+}
+
+function drawWorld2D(v: View): void {
   const { scale } = field, T = clock.T;
   // Lines and dots are thickened when the field is scaled down, so they don't vanish on a phone.
   const thick = Math.max(1, .7 / scale);
@@ -30,12 +57,11 @@ export function renderField(): void {
   ctx.globalAlpha = 1;
   // Translucent clear leaves motion trails.
   ctx.fillStyle = 'rgba(6,7,13,0.34)';
-  ctx.fillRect(0, 0, size.W, size.H);
+  ctx.fillRect(0, 0, v.w, v.h);
   ctx.save();
   if (world.shake > .1) ctx.translate((Math.random() - .5) * world.shake, (Math.random() - .5) * world.shake);
   ctx.save();
   ctx.scale(scale, scale);
-
   // wells
   for (const w of world.wells) {
     const g = ctx.createRadialGradient(w.x, w.y, 0, w.x, w.y, WELL_GLOW);
@@ -95,11 +121,15 @@ export function renderField(): void {
   // blasts
   for (const b of world.blasts) {
     const p = Math.min(1, b.age / b.dur), fade = b.age > b.dur ? 1 - (b.age - b.dur) / .35 : 1;
-    const hue = b.kind === BlastKind.Volatile ? 350 : b.kind === BlastKind.Crystal ? 195 : b.kind === BlastKind.Drone ? 45 : 190 + b.depth * 28;
+    const hue = b.kind === BlastKind.Volatile ? 350 : b.kind === BlastKind.Crystal ? 195 : b.kind === BlastKind.Drone ? 45
+      : b.kind === BlastKind.Mirror ? 275 : 190 + b.depth * 28;
     ctx.globalAlpha = Math.max(0, fade) * (b.kind === BlastKind.Crystal ? .4 : .85);
     ctx.strokeStyle = `hsl(${hue},100%,${b.kind === BlastKind.Drone ? 70 : 65}%)`;
     ctx.lineWidth = (b.kind === BlastKind.Volatile ? 4 : 2.4) * (1.4 - p * .6) * thick;
-    ctx.beginPath(); ctx.arc(b.x, b.y, Math.max(.1, b.r), 0, TAU); ctx.stroke();
+    const br = Math.max(.1, b.r);
+    ctx.beginPath();
+    if (b.sq) ctx.rect(b.x - br, b.y - br, br * 2, br * 2); else ctx.arc(b.x, b.y, br, 0, TAU);
+    ctx.stroke();
     if (p < 1) {
       ctx.globalAlpha = .12 * (1 - p);
       ctx.fillStyle = ctx.strokeStyle; ctx.fill();
@@ -122,29 +152,72 @@ export function renderField(): void {
     ctx.fillRect(p.x - sz / 2, p.y - sz / 2, sz, sz);
   }
   ctx.globalAlpha = 1;
+
+  // entangled orbs wear a thin violet ring
+  ctx.strokeStyle = 'rgba(201,166,255,.7)'; ctx.lineWidth = 1.2 * thick;
+  for (const o of world.orbs) if (o.twin) { ctx.beginPath(); ctx.arc(o.x, o.y, Math.max(o.r * 3.6, minOrb) * .42, 0, TAU); ctx.stroke(); }
+
+  // the bridge
+  if (multiverseOn()) {
+    const x = world.index === 0 ? field.W - 2 : 2, y0 = field.H / 2 - stat.portalSpan / 2;
+    ctx.globalAlpha = Math.min(1, .5 + .2 * Math.sin(T * 3) + .6 * world.portalFlash);
+    ctx.fillStyle = 'rgba(127,212,255,.35)'; ctx.fillRect(x - 7 * thick, y0, 14 * thick, stat.portalSpan);
+    ctx.fillStyle = '#e6f7ff'; ctx.fillRect(x - 1.5 * thick, y0, 3 * thick, stat.portalSpan);
+    ctx.globalAlpha = 1;
+  }
   ctx.restore();
 
-  drawFieldOverlay();
+  drawFieldOverlay(v);
   ctx.restore();
-
-  drawFlash();
 }
 
-/** WebGL path: the field is drawn on the GL canvas, and only drones, texts and the flash on the 2D canvas above it. */
+/** WebGL path: each universe on the GL canvas, and only drones, texts and the flash on the 2D canvas above it. */
 export function renderFieldWithGL(): void {
-  const sx = world.shake > .1 ? (Math.random() - .5) * world.shake : 0;
-  const sy = world.shake > .1 ? (Math.random() - .5) * world.shake : 0;
-  renderFieldGL(sx, sy);
   ctx.globalCompositeOperation = 'source-over';
   ctx.globalAlpha = 1;
   ctx.clearRect(0, 0, size.W, size.H);
-  ctx.save();
-  ctx.translate(sx, sy);
-  drawFieldOverlay();
-  ctx.restore();
-  drawFlash();
+  for (const w of shownWorlds()) {
+    useWorld(w);
+    const v = w.view;
+    const sx = world.shake > .1 ? (Math.random() - .5) * world.shake : 0;
+    const sy = world.shake > .1 ? (Math.random() - .5) * world.shake : 0;
+    renderFieldGL(v, sx, sy);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(v.x, v.y, v.w, v.h); ctx.clip();
+    ctx.translate(v.x + sx, v.y + sy);
+    drawFieldOverlay(v);
+    ctx.restore();
+    flashIn(v);
+  }
+  useWorld(worlds[0]);
+  drawLinks();
 }
 
+/**
+ * Across both universes: faint threads between entangled twins (only when both are on screen),
+ * and a label naming each universe and its Law.
+ */
+function drawLinks(): void {
+  if (!multiverseOn()) return;
+  const [a, b] = worlds;
+  if (layout.split) {
+    ctx.strokeStyle = 'rgba(201,166,255,.13)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (const o of a.orbs) {
+      const t = o.twin;
+      if (!t || t.dead) continue;
+      ctx.moveTo(a.view.x + o.x * a.view.scale, a.view.y + o.y * a.view.scale);
+      ctx.lineTo(b.view.x + t.x * b.view.scale, b.view.y + t.y * b.view.scale);
+    }
+    ctx.stroke();
+  }
+  ctx.font = `600 11px ${FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+  for (const w of shownWorlds()) {
+    const law = LAWS.find(l => l.id === S.laws[w.index]);
+    ctx.fillStyle = 'rgba(127,212,255,.55)';
+    ctx.fillText(`Universe ${w.index ? 'B' : 'A'}${law ? ' · ' + law.name : ''}`, w.view.x + 10, w.view.y + w.view.h - 8);
+  }
+}
 /** Drones used shadowBlur every frame, which Firefox renders very slowly; draw the glowing drone once and stamp it. */
 const DRONE_HALF = 24;
 let droneImg: HTMLCanvasElement | null = null, droneDPR = 0;
@@ -161,8 +234,9 @@ function droneSprite(): HTMLCanvasElement {
   return droneImg;
 }
 
+
 /** Drones, payout texts and the first-run hint, in screen pixels at world positions so they stay readable. */
-function drawFieldOverlay(): void {
+function drawFieldOverlay(v: View): void {
   const { W, H, scale } = field, T = clock.T;
   ctx.globalCompositeOperation = 'source-over';
   for (const d of world.drones) {
@@ -188,6 +262,6 @@ function drawFieldOverlay(): void {
   if (S.total < 3) {
     ctx.fillStyle = `rgba(232,236,255,${.35 + .2 * Math.sin(T * 3)})`;
     ctx.font = `600 16px ${FONT}`;
-    ctx.fillText('Click to detonate', size.W / 2, size.H / 2 + 40);
+    ctx.fillText('Click to detonate', v.w / 2, v.h / 2 + 40);
   }
 }

@@ -19,10 +19,11 @@
       <div id="ready">✦ Supernova ready ✦</div>
       <div id="riftHud"></div>
       <div id="dilHud"></div>
+      <div id="melodyHud" hidden></div>
       <div id="pins" hidden></div>
     </div>
     <div id="combo"></div>
-    <div id="viewBtns" hidden><button data-v="orbs" class="on">Orbs</button><button data-v="board">Constellation</button></div>
+    <div id="viewBtns" hidden><button data-v="orbs" class="on">Orbs</button><button data-v="board">Constellation</button><button id="uniBtn" hidden>⇄ B</button></div>
     <div id="palette" hidden><div id="palInfo"></div><div id="palBtns"></div></div>
     <div id="toasts"></div>
   </div>
@@ -32,6 +33,7 @@
       <button data-t="nova" id="novaTab" hidden>Supernova</button>
       <button data-t="col" id="colTab" hidden>Collapse</button>
       <button data-t="sing" id="singTab" hidden>Singularity</button>
+      <button data-t="mv" id="mvTab" hidden>Multiverse</button>
       <button data-t="stats">Stats</button>
       <button id="mute" title="Toggle sound">♪ On</button>
     </div>
@@ -57,6 +59,7 @@
         <div id="colInfo" style="font-size:13px"></div>
         <div class="bar"><i id="colBar" style="background:linear-gradient(90deg,#6b3cff,#c9a6ff)"></i></div>
         <button class="bigbtn" id="colBtn" style="background:linear-gradient(90deg,#6b3cff,#c9a6ff);color:#fff" disabled>Collapse</button>
+        <label class="toggle" id="autoDmRow" hidden style="margin-top:10px"><input type="checkbox" id="autoDm"> Autobuy Dark Matter upgrades (cheapest first)</label>
         <label class="toggle" id="autoColRow" hidden style="margin-top:10px"><input type="checkbox" id="autoCol"> Auto-Collapse when it would at least double your Dark Matter (held plus spent on upgrades), or after 5 minutes</label>
       </div>
       <div class="help" id="singTease" hidden></div>
@@ -77,6 +80,20 @@
       <div class="cat">Singularity upgrades</div>
       <div id="slList" class="list"></div>
       <div class="help" id="beyond">Beyond the horizon: <b>???</b> Max every Singularity upgrade.</div>
+    </div>
+    <div id="pane-mv" class="pane" hidden>
+      <div class="novabox" style="background:linear-gradient(160deg,#0a1d2a,#0a0d1c);border-color:#1f4a66">
+        <div class="sd" style="color:#7fd4ff"><span id="mvCount">0</span> ❖ Threads</div>
+        <p>Open the <b style="color:#d6f1ff">Multiverse</b>. Everything resets (only the Eternal Autobuyer stays) and a second universe opens beside the first, joined by a <b style="color:#d6f1ff">bridge</b>. A blast that reaches the bridge carries on in the other universe as part of the same chain. Threads come from your best <b style="color:#d6f1ff">cross-world chain</b> this cycle: the pops it made on the far side. After the first, a Multiverse also needs a Singularity in the cycle.</p>
+        <div id="mvInfo" style="font-size:13px"></div>
+        <div class="bar"><i id="mvBar" style="background:linear-gradient(90deg,#3aa0ff,#c9a6ff)"></i></div>
+        <button class="bigbtn" id="mvBtn" style="background:linear-gradient(90deg,#3aa0ff,#c9a6ff);color:#06101c" disabled>Open the Multiverse</button>
+      </div>
+      <div class="cat" id="lawCat" hidden>Laws of Physics</div>
+      <div class="help" id="lawBox" hidden></div>
+      <div class="cat">Multiverse upgrades</div>
+      <div id="tlList" class="list"></div>
+      <div class="help" id="beyond5" hidden>Beyond: <b>???</b> Max every Multiverse upgrade.</div>
     </div>
     <div id="pane-stats" class="pane" hidden>
       <div class="stats" id="statsBox"></div>

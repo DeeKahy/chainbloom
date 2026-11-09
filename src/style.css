@@ -30,6 +30,7 @@ canvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
 #tabs #novaTab{color:var(--gold)}
 #tabs #colTab{color:#c9a6ff}
 #tabs #singTab{color:#ffb35c}
+#tabs #mvTab{color:#7fd4ff}
 #tabs button{padding:7px 9px!important}
 .list{display:flex;flex-direction:column;gap:8px}
 .list>*{flex-shrink:0}
@@ -41,6 +42,16 @@ canvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
 .sgc .cost{color:var(--bad)}
 .sgc.afford .cost{color:#ffb35c}
 .sgc.afford{border-color:#6b4422}
+.mvc .cost{color:var(--bad)}
+.mvc.afford .cost{color:#7fd4ff}
+.mvc.afford{border-color:#1f5578}
+#melodyHud{margin-top:6px;display:flex;justify-content:center;gap:6px;align-items:center;font-size:12px;color:#7dffb0}
+#melodyHud i{width:10px;height:10px;border-radius:50%;display:inline-block;box-shadow:0 0 8px currentColor}
+#melodyHud[hidden]{display:none}
+.lawrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}
+.lawrow b{min-width:82px}
+.lawrow button{background:var(--panel);border:1px solid var(--line);border-radius:7px;color:var(--dim);font:inherit;font-size:12px;padding:5px 8px;cursor:pointer}
+.lawrow button.on{color:#7fd4ff;border-color:#7fd4ff}
 .rift{cursor:default}
 .rift .rbtn{margin-top:6px;background:#241a44;border:1px solid #4a3570;color:#e3d4ff;border-radius:8px;padding:6px 10px;font:inherit;font-size:12px;cursor:pointer}
 .rift.done{opacity:.6}
