@@ -23,6 +23,8 @@ export interface Chain {
   hops: number;
   /** Garden beds this chain already made bloom: each flower blooms at most once per chain, so chains end. */
   bloomed?: object[];
+  /** The Big Bang's chain: its ring pops everything, so only a third of the pops fire their own blast (phones). */
+  thin?: boolean;
   /** Melody: colours of the latest normal orbs popped, and whether they matched the target. */
   notes: string;
   sang: boolean;

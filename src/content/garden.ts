@@ -2,7 +2,7 @@ import { fmt } from '../core/util';
 import type { UpgradeDef } from './types';
 
 /**
- * Layer 6: the Garden → Pollen ✿. Unlocked by 250 Threads ever and one chain that crosses the bridge
+ * Layer 6: the Garden → Pollen ✿. Unlocked by 150 Threads ever and one chain that crosses the bridge
  * three times. No reset: flowers are planted on the orb field and change how chains run. A flower
  * grows from pops (its trigger gene), and when it blooms it fires its pattern gene as part of the
  * chain that fed it, with that chain's depth wound back, so the garden layout decides how far chains go.

@@ -284,7 +284,7 @@ export function tickPrestige(): void {
 }
 
 // ---------- unlocks for layers 6-8 ----------
-export const GARDEN_THREADS = 250, GARDEN_HOPS = 3;
+export const GARDEN_THREADS = 150, GARDEN_HOPS = 3;
 export const LOOM_POLLEN = 400, LOOM_POT = 4;
 export const BANG_BEAD = 6, BANG_KNOTS = 20;
 
@@ -341,11 +341,12 @@ export function setGathering(on: boolean): void {
 
 /** Set off every orb in every universe as one chain. The Eras and the reset come when it ends. */
 export function doBigBang(): void {
-  if (!S.gathering || bangInProgress() || eraGain(gatheredOrbs(), stat.eraMult) < 1) return;
+  if (!S.gathering || bangInProgress() || eraGain(gatheredOrbs(), stat.bangWeight, stat.eraMult) < 1) return;
   S.gathering = false;
   recalc();
   useWorld(worlds[0]);
   const ch = newChain(field.W / 2, field.H / 2, false);
+  ch.thin = true;
   for (const w of activeWorlds()) {
     useWorld(w);
     addBlast(field.W / 2, field.H / 2, Math.max(field.W, field.H) * 1.05, 0, ch, BlastKind.Volatile);
@@ -362,7 +363,7 @@ export function doBigBang(): void {
 function finishBigBang(): void {
   const ch = bang.chain!;
   bang.chain = null;
-  const g = Math.max(1, eraGain(ch.count, stat.eraMult));
+  const g = Math.max(1, eraGain(ch.count, stat.bangWeight, stat.eraMult));
   const first = !S.bangs;
   resetBangLayer();
   S.eras += g; S.erasEver += g; S.bangs++;

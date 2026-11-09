@@ -142,7 +142,7 @@ export function tickHud(): void {
   } else setText(el.dilHud, '');
 
   if (S.gathering || bangInProgress()) {
-    setText(el.ready, bangInProgress() ? '◈ BIG BANG ◈' : `◈ Stillness · ${fmt(gatheredOrbs())} orbs · +${fmt(eraGain(gatheredOrbs(), stat.eraMult))} ◈`);
+    setText(el.ready, bangInProgress() ? '◈ BIG BANG ◈' : `◈ Stillness · ${fmt(gatheredOrbs())} orbs · +${fmt(eraGain(gatheredOrbs(), stat.bangWeight, stat.eraMult))} ◈`);
     el.ready.style.color = '#ff9ad5';
     el.ready.classList.add('on');
     return;

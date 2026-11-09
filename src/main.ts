@@ -68,12 +68,16 @@ function frame(now: number): void {
   const dt = Math.min(.05, (now - last) / 1000);
   last = now;
 
+  const t0 = performance.now();
   tickGlobal(dt);
   for (const w of activeWorlds()) {
     useWorld(w);
     updateField(S.laws[w.index] === 'quick' ? dt * 1.5 : dt); // Law: Quick Time
   }
   useWorld(worlds[0]);
+  const sim = performance.now() - t0;
+  debug.simMs += (sim - debug.simMs) * .1;
+  debug.simMax = Math.max(debug.simMax * .995, sim);
   updateBoard(dt);
   if (app.view === 'board') renderBoard(); else if (gfx.gl) renderFieldWithGL(); else renderField();
   frameHud(dt);
@@ -101,7 +105,8 @@ window.addEventListener('beforeunload', () => save(autoRateAvg()));
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(autoRateAvg()); });
 
 // Debug handle for the browser console.
-const debug = { S, recalc, world, worlds, gfx, clearCanvas, renderField, renderFieldWithGL, /** Freeze the loop (for comparing renderers). */ paused: false };
+const debug = { S, recalc, world, worlds, gfx, clearCanvas, renderField, renderFieldWithGL, /** Freeze the loop (for comparing renderers). */ paused: false,
+  /** Simulation time per frame in ms: a moving average and a slowly decaying peak (for profiling). */ simMs: 0, simMax: 0 };
 (window as unknown as Record<string, unknown>).__cb = debug;
 
 requestAnimationFrame(frame);

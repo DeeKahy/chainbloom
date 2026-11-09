@@ -8,14 +8,20 @@ import type { UpgradeDef } from './types';
  * length. It resets everything below except automation, Laws, seeds and the garden layout.
  */
 
-/** Eras from the Big Bang chain: sqrt(pops / 250), so 1 at 250, 3 at ~2.3K, 6 at 9K. */
-export const eraGain = (pops: number, mult: number): number => Math.floor(Math.sqrt(pops / 250) * mult);
+/** The Stillness holds this many times the usual orb cap: at most 1,800 a field, which a phone can still run. */
+export const HOLD_MULT = 4;
+
+/**
+ * Eras from the Big Bang chain: sqrt(pops × weight / 250), so 1 at 250, 3 at ~2.3K, 6 at 9K.
+ * `weight` is Long Stillness: each held orb counts for more instead of the field holding more.
+ */
+export const eraGain = (pops: number, weight: number, mult: number): number => Math.floor(Math.sqrt(pops * weight / 250) * mult);
 
 export const EL: UpgradeDef[] = [
   { id: 'light', name: 'Old Light', base: 1, g: 1.7, max: 10,
     desc: (l, t) => `Orb value ×${1 + l} → ×${1 + t}` },
   { id: 'still', name: 'Long Stillness', base: 2, g: 2, max: 6,
-    desc: (l, t) => `The Stillness holds ×${4 + l} → ×${4 + t} the usual orb cap` },
+    desc: (l, t) => `Each orb the Big Bang pops counts ×${(1 + .25 * l).toFixed(2)} → ×${(1 + .25 * t).toFixed(2)} toward Eras` },
   { id: 'first', name: 'First Thread', base: 2, g: 2, max: 6,
     desc: (l, t) => `Thread gain ×${fmt(1.5 ** l)} → ×${fmt(1.5 ** t)}` },
   { id: 'echo', name: 'Afterglow', base: 3, g: 2, max: 5,

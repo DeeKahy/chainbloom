@@ -3,6 +3,7 @@ import { chainMemoryMult, DILATION_BASE, DILATION_STEP } from '../content/singul
 import { BRIDGE_SPAN } from '../content/multiverse';
 import { GROW_NEED, pollenThreadMult } from '../content/garden';
 import { loomValueMult, LOOM_BASE } from '../content/loom';
+import { HOLD_MULT } from '../content/bang';
 import { S } from '../state/state';
 
 /** Derived numbers, recomputed from the save by recalc(). Never saved. */
@@ -63,8 +64,9 @@ export interface Stats {
   loomMult: number;
   loomTop: number;
   heavy: number;
-  /** Layer 8 Big Bang: Stillness cap multiplier and Era gain multiplier. */
+  /** Layer 8 Big Bang: Stillness cap multiplier, what each Big Bang pop counts for, and the Era gain multiplier. */
   holdMult: number;
+  bangWeight: number;
   eraMult: number;
   /** The black hole exists from the first Singularity on. */
   hole: boolean;
@@ -132,7 +134,8 @@ export function recalc(): void {
   stat.loomTop = Math.max(0, ...S.loom);
   stat.heavy = .1 * lo.heavy;
   stat.pollenMult = 1.4 ** gd.nectar * (1 + .2 * stat.loomTop);
-  stat.holdMult = 4 + er.still;
+  stat.holdMult = HOLD_MULT;
+  stat.bangWeight = 1 + .25 * er.still;
   stat.eraMult = 1.25 ** er.echo;
   stat.value *= stat.loomMult * (1 + er.light);
   stat.threadMult *= pollenThreadMult(S.pollenEver) * 1.5 ** er.first;

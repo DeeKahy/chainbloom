@@ -189,8 +189,8 @@ export function buildBangPane(): void {
 
 export function refreshBangPane(): void {
   setText($('#eraCount'), fmt(S.eras));
-  const orbs = gatheredOrbs(), g = eraGain(orbs, stat.eraMult);
-  const nextAt = Math.ceil(250 * ((g + 1) / stat.eraMult) ** 2);
+  const orbs = gatheredOrbs(), g = eraGain(orbs, stat.bangWeight, stat.eraMult);
+  const nextAt = Math.ceil(250 * ((g + 1) / stat.eraMult) ** 2 / stat.bangWeight);
   const room = stat.cap * activeWorlds().length;
   const info = $('#bangInfo');
   if (bangInProgress()) setText(info, 'The Big Bang is going off…');
