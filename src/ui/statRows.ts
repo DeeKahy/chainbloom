@@ -1,6 +1,6 @@
 import { fmt } from '../core/util';
 import { RIFTS } from '../content/rifts';
-import { shared, world } from '../sim/world';
+import { multiverseOn, shared, world, worlds } from '../sim/world';
 import { S } from '../state/state';
 import { stat } from '../systems/stats';
 
@@ -29,7 +29,8 @@ export const STAT_ROWS: StatRow[] = [
   { id: 'depth', label: 'Chain depth', value: () => String(stat.depth) },
   { id: 'combo', label: 'Resonance', value: () => '×' + stat.combo.toFixed(2) + ' / step' },
   { id: 'maxMult', label: 'Max chain multiplier', value: () => '×' + fmt(stat.combo ** stat.depth) },
-  { id: 'orbs', label: 'Orbs on field', value: () => `${world.orbs.length} / ${stat.cap}` },
+  { id: 'orbs', label: 'Orbs on field', value: () => multiverseOn()
+    ? `A ${worlds[0].orbs.length} · B ${worlds[1].orbs.length} (max ${stat.cap} each)` : `${world.orbs.length} / ${stat.cap}` },
   { id: 'collapses', label: 'Collapses', value: () => String(S.collapses) },
   { id: 'dmEver', label: 'Dark Matter earned', value: () => fmt(S.dmEver) },
   { id: 'fluxEver', label: 'Flux earned', value: () => fmt(S.fluxEver) },
@@ -39,7 +40,8 @@ export const STAT_ROWS: StatRow[] = [
   { id: 'singEver', label: 'Singularity earned', value: () => fmt(S.singEver) },
   { id: 'cyclePeak', label: 'Best run this cycle', value: () => '$' + fmt(S.cyclePeak) },
   { id: 'dilation', label: 'Dilation', value: () => stat.hole ? '^' + Math.min(1, stat.dilation + (world.flareT > 0 ? stat.flareBonus : 0)).toFixed(2) : 'none' },
-  { id: 'mass', label: 'Black hole mass', value: () => stat.hole ? Math.floor(world.mass / stat.massCap * 100) + '%' : '-' },
+  { id: 'mass', label: 'Black hole mass', value: () => !stat.hole ? '-' : multiverseOn()
+    ? worlds.map((w, i) => `${i ? 'B' : 'A'} ${Math.floor(w.mass / stat.massCap * 100)}%`).join(' · ') : Math.floor(world.mass / stat.massCap * 100) + '%' },
   { id: 'multiverses', label: 'Multiverses', value: () => String(S.multiverses) },
   { id: 'threadsEver', label: 'Threads earned', value: () => fmt(S.threadsEver) },
   { id: 'crossBest', label: 'Best cross-world chain', value: () => fmt(S.crossBest) + ' pops' },
