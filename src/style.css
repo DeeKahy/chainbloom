@@ -2,7 +2,8 @@
   --bg:#06070d;--panel:#0c0f1e;--panel2:#131731;--line:#222a52;--text:#e8ecff;--dim:#8790bd;
   --accent:#6ee7ff;--gold:#ffd34d;--good:#7dffb0;--bad:#ff5a6e;--violet:#b98bff;
 }
-*{box-sizing:border-box}
+/* manipulation = taps, scrolling and pinch-zoom, but no double-tap zoom (fast taps on buttons zoomed the page on iOS). The canvas below stays at none. */
+*{box-sizing:border-box;touch-action:manipulation}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
 #app{display:flex;height:100vh;height:100dvh}
 #stage{position:relative;flex:1;min-width:0;background:var(--bg)}
