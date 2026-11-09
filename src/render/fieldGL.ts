@@ -1,6 +1,11 @@
 import { clock } from '../core/app';
+import { TAU } from '../core/util';
+import { S } from '../state/state';
 import { BlastKind, gate, HOLE_CORE, HOLE_FEED, multiverseOn, world, WELL_GLOW } from '../sim/world';
 import { stat } from '../systems/stats';
+import { flowersOf } from '../sim/garden';
+import { FLOWER_REACH, PATTERNS } from '../content/garden';
+import { NORMALS } from './sprites';
 import { field, glCv, layoutChanged, size, type View } from './canvas';
 import { colorOf, CRY, WHITE } from './sprites';
 
@@ -263,6 +268,9 @@ function put(x: number, y: number, r: number, kind: number, c: readonly number[]
 
 const NONE = [0, 0, 0] as const;
 
+/** Hue of a flower's centre by its pattern gene (the same in field.ts). */
+export const PATTERN_HUE: Record<string, number> = Object.fromEntries(PATTERNS.map((p, i) => [p.id, [140, 30, 200, 0, 50, 280][i]]));
+
 let lastLayout = -1;
 
 /**
@@ -315,6 +323,19 @@ export function renderFieldGL(v: View, shakeX: number, shakeY: number): void {
     }
   }
 
+  // flowers (layer 6): a faint reach ring, a growth ring, six petals and a centre in the pattern's colour
+  if (S.gardenOn) for (const f of flowersOf(world)) {
+    const col = rgbOf(NORMALS[f.seed.hue].rgb), g = Math.min(1, f.growth / stat.growNeed), rest = f.wilt > 0 ? .45 : 1;
+    if (f.seed.t !== 'cross') put(f.x, f.y, FLOWER_REACH, BLAST, col, .06, 1.2 * thick);
+    put(f.x, f.y, 26 + 14 * g, BLAST, col, (.35 + .5 * g) * rest, 2.4 * thick);
+    for (let i = 0; i < 6; i++) {
+      const a = i * TAU / 6 + T * .4, r = 15 + 9 * g;
+      put(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r, (10 + 6 * g) * rest, ORB, col, .9);
+    }
+    put(f.x, f.y, 13, ORB, hsl(PATTERN_HUE[f.seed.p] ?? 140, .7), 1);
+    if (f.glow > 0) put(f.x, f.y, 30 + 90 * (1 - f.glow), BLAST, rgbOf('#7dffb0'), f.glow, 3 * thick);
+  }
+
   const twin = rgbOf('#c9a6ff');
   for (const o of world.orbs) {
     const grow = Math.min(1, (T - o.born) * 4);
@@ -329,7 +350,7 @@ export function renderFieldGL(v: View, shakeX: number, shakeY: number): void {
   for (const b of world.blasts) {
     const p = Math.min(1, b.age / b.dur), fade = b.age > b.dur ? 1 - (b.age - b.dur) / .35 : 1;
     const hue = b.kind === BlastKind.Volatile ? 350 : b.kind === BlastKind.Crystal ? 195 : b.kind === BlastKind.Drone ? 45
-      : b.kind === BlastKind.Mirror ? 275 : 190 + b.depth * 28;
+      : b.kind === BlastKind.Mirror ? 275 : b.kind === BlastKind.Bloom ? 140 : 190 + b.depth * 28;
     const col = hsl(hue % 360, b.kind === BlastKind.Drone ? .7 : .65);
     const r = Math.max(.1, b.r);
     const lw = (b.kind === BlastKind.Volatile ? 4 : 2.4) * (1.4 - p * .6) * thick;

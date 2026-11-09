@@ -1,12 +1,14 @@
 /** UI-level state shared between modules (not saved). */
 export type View = 'orbs' | 'board';
-export type Tab = 'up' | 'nova' | 'col' | 'sing' | 'mv' | 'stats';
+export type Tab = 'up' | 'nova' | 'col' | 'sing' | 'mv' | 'garden' | 'loom' | 'bang' | 'stats';
 export type BuyAmount = '1' | '10' | 'max';
 
 export const app = {
   view: 'orbs' as View,
   tab: 'up' as Tab,
   buyN: '1' as BuyAmount,
+  /** Seed id waiting to be planted: the next tap on the orb field plants it (layer 6). */
+  planting: null as number | null,
 };
 
 /**

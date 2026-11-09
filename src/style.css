@@ -23,8 +23,8 @@ canvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
 .toast{background:rgba(19,23,49,.92);border:1px solid var(--line);border-left:3px solid var(--accent);padding:8px 12px;border-radius:8px;font-size:13px;animation:toastIn .3s ease-out}
 @keyframes toastIn{from{opacity:0;transform:translateX(-12px)}}
 
-#side{width:370px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
-#tabs{display:flex;gap:4px;padding:10px 10px 0}
+#side{width:370px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+#tabs{display:flex;flex-wrap:wrap;gap:4px;padding:10px 10px 0}
 #tabs button,#buyamt button{background:transparent;color:var(--dim);border:1px solid transparent;border-radius:8px;padding:7px 11px;font:inherit;font-size:13px;cursor:pointer}
 #tabs button.on{background:var(--panel2);color:var(--text);border-color:var(--line)}
 #tabs button:hover,#buyamt button:hover{color:var(--text)}
@@ -129,7 +129,7 @@ canvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
   body.boardview #hud{display:none}
   #palBtns .pb{flex:1 1 calc(33% - 6px)}
   /* five tabs plus the sound toggle: tighter, and scrollable if they still do not fit */
-  #tabs{overflow-x:auto;scrollbar-width:none;padding:8px 8px 0}
+  #tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:8px 8px 0}
   #tabs::-webkit-scrollbar{display:none}
   #tabs button{flex:none;padding:7px 8px;font-size:12.5px}
 }
@@ -143,3 +143,35 @@ canvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
 .stats span.srow.on:nth-child(odd){color:var(--accent)}
 .stats span.srow.on:nth-child(odd)::before{content:'📌 '}
 .pinhint{font-size:12px;color:var(--dim);margin:-4px 2px 0}
+
+/* layers 6-8 */
+#tabs #gardenTab{color:#7dffb0}
+#tabs #loomTab{color:#ffcf7a}
+#tabs #bangTab{color:#ff9ad5}
+.glc .cost{color:var(--bad)}
+.glc.afford .cost{color:#7dffb0}
+.glc.afford{border-color:#1f6b45}
+.llc .cost{color:var(--bad)}
+.llc.afford .cost{color:#ffcf7a}
+.llc.afford{border-color:#6b5222}
+.elc .cost{color:var(--bad)}
+.elc.afford .cost{color:#ff9ad5}
+.elc.afford{border-color:#6b2a55}
+.seed{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:6px}
+.seed.sel{border-color:#7dffb0;box-shadow:0 0 0 1px #7dffb0 inset}
+.seed .genes{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700}
+.seed .genes .dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.seed .genes .pot{margin-left:auto;color:#ffd34d;font-size:12px;letter-spacing:1px}
+.seed .about{font-size:12px;color:var(--dim);line-height:1.35}
+.seed .btns{display:flex;gap:6px;flex-wrap:wrap}
+.seed .btns button{background:var(--panel);border:1px solid var(--line);border-radius:7px;color:var(--text);font:inherit;font-size:12px;padding:5px 9px;cursor:pointer}
+.seed .btns button.on{color:#7dffb0;border-color:#7dffb0}
+.seed .btns button:disabled{opacity:.4;cursor:default}
+.seed .tag{font-size:11px;color:#7dffb0;align-self:center}
+.loom{display:grid;gap:5px;padding:4px;background:#100c06;border:1px solid #3a2c12;border-radius:12px}
+.loom button{aspect-ratio:1;border-radius:50%;border:1px solid #2a2010;background:#17120a;color:#1a1206;font:inherit;font-weight:800;font-size:14px;cursor:pointer;padding:0;transition:transform .12s}
+.loom button.empty{background:transparent;border-style:dashed;cursor:default}
+.loom button.sel{outline:2px solid #fff;outline-offset:2px}
+.loom button.match{box-shadow:0 0 10px 2px rgba(255,255,255,.45)}
+.loom button.pop{animation:beadpop .35s}
+@keyframes beadpop{0%{transform:scale(.4)}60%{transform:scale(1.18)}100%{transform:scale(1)}}

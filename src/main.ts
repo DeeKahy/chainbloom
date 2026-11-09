@@ -19,6 +19,7 @@ import { buildPalette } from './ui/palette';
 import { buildPins } from './ui/pins';
 import { buildCollapsePane, buildMultiversePane, buildNovaPane, buildSingPane, buildStatsPane } from './ui/panes';
 import { buildRunShop } from './ui/shop';
+import { buildBangPane, buildGardenPane, buildLoomPane } from './ui/layers';
 import { toast } from './ui/toast';
 
 // ---------- boot ----------
@@ -40,6 +41,9 @@ buildNovaPane();
 buildCollapsePane();
 buildSingPane();
 buildMultiversePane();
+buildGardenPane();
+buildLoomPane();
+buildBangPane();
 buildStatsPane();
 buildPalette();
 buildPins();

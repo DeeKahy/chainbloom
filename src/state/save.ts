@@ -38,6 +38,10 @@ const MIGRATIONS: ((d: RawSave) => void)[] = [
     if (typeof d.crossTotal !== 'number') d.crossTotal = 0;
     if (typeof d.threadsLive !== 'number') d.threadsLive = 0;
   },
+  // 7 → 8: layers 6-8 (Garden, Loom, Big Bang). Everything starts locked and empty; fresh() fills the rest.
+  d => {
+    if (typeof d.hopBest !== 'number') d.hopBest = 0;
+  },
 ];
 
 /**
@@ -60,6 +64,12 @@ export function normalize(raw: unknown): GameState {
   out.dl = Object.assign(fresh().dl, d.dl);
   out.sl = Object.assign(fresh().sl, d.sl);
   out.tl = Object.assign(fresh().tl, d.tl);
+  out.gl = Object.assign(fresh().gl, d.gl);
+  out.ll = Object.assign(fresh().ll, d.ll);
+  out.el = Object.assign(fresh().el, d.el);
+  // nested shapes a hand-edited or damaged save could break
+  if (!out.garden || !Array.isArray(out.garden.seeds) || !Array.isArray(out.garden.beds)) out.garden = fresh().garden;
+  if (!Array.isArray(out.loom) || out.loom.length !== fresh().loom.length) out.loom = fresh().loom;
   out.version = newer ? (d.version as number) : SAVE_VERSION;
   return out;
 }

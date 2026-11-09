@@ -1,6 +1,8 @@
 import { riftById } from '../content/rifts';
 import { chainMemoryMult, DILATION_BASE, DILATION_STEP } from '../content/singularity';
 import { BRIDGE_SPAN } from '../content/multiverse';
+import { GROW_NEED, pollenThreadMult } from '../content/garden';
+import { loomValueMult, LOOM_BASE } from '../content/loom';
 import { S } from '../state/state';
 
 /** Derived numbers, recomputed from the save by recalc(). Never saved. */
@@ -48,6 +50,22 @@ export interface Stats {
   portalSpan: number;
   bExp: number;
   threadMult: number;
+  /** Layer 6 Garden: beds, growth to bloom, depth wound back per bloom, mutation, bank size, potency cap, Pollen per bloom. */
+  beds: number;
+  growNeed: number;
+  refresh: number;
+  mutate: number;
+  bank: number;
+  potMax: number;
+  pollenMult: number;
+  /** Layer 7 Loom: board side, orb value multiplier, best bead on the board, chance of a heavier bead. */
+  loomSize: number;
+  loomMult: number;
+  loomTop: number;
+  heavy: number;
+  /** Layer 8 Big Bang: Stillness cap multiplier and Era gain multiplier. */
+  holdMult: number;
+  eraMult: number;
   /** The black hole exists from the first Singularity on. */
   hole: boolean;
   /** Seconds before an orb decays; Infinity outside the Entropy Rift. */
@@ -101,6 +119,32 @@ export function recalc(): void {
   stat.portalSpan = BRIDGE_SPAN + 80 * m.bridge;
   stat.bExp = Math.min(1, .5 + .1 * m.tune);
   stat.threadMult = 1.5 ** m.weave;
+
+  const gd = S.gl, lo = S.ll, er = S.el;
+  stat.beds = 2 + gd.beds + lo.trellis;
+  stat.growNeed = GROW_NEED * .85 ** gd.fertile;
+  stat.refresh = 1 + gd.roots;
+  stat.mutate = .2 + .1 * gd.mutagen;
+  stat.bank = 6 + 2 * gd.vault;
+  stat.potMax = 5 + gd.hybrid;
+  stat.loomSize = LOOM_BASE + lo.wide;
+  stat.loomMult = loomValueMult(S.loom, lo.taut);
+  stat.loomTop = Math.max(0, ...S.loom);
+  stat.heavy = .1 * lo.heavy;
+  stat.pollenMult = 1.4 ** gd.nectar * (1 + .2 * stat.loomTop);
+  stat.holdMult = 4 + er.still;
+  stat.eraMult = 1.25 ** er.echo;
+  stat.value *= stat.loomMult * (1 + er.light);
+  stat.threadMult *= pollenThreadMult(S.pollenEver) * 1.5 ** er.first;
+
+  // The Stillness (gathering for a Big Bang): nothing detonates, and the field fills far past its cap.
+  if (S.gathering) {
+    stat.cap *= stat.holdMult;
+    stat.spawn *= 4;
+    stat.drones = 0;
+    stat.unstable = 0;
+    stat.cryRate = 0;
+  }
 
   const rift = S.rift ? riftById(S.rift) : undefined;
   if (rift) {

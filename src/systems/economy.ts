@@ -19,6 +19,10 @@ export interface Chain {
   /** Universe it started in, and pops it made in the other universe (layer 5: Threads come from these). */
   home: number;
   cross: number;
+  /** Times a blast of this chain went through the bridge. */
+  hops: number;
+  /** Garden beds this chain already made bloom: each flower blooms at most once per chain, so chains end. */
+  bloomed?: object[];
   /** Melody: colours of the latest normal orbs popped, and whether they matched the target. */
   notes: string;
   sang: boolean;

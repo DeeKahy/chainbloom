@@ -11,7 +11,7 @@ import { exportSave, parseImport } from '../state/save';
 import { S } from '../state/state';
 import { stat } from '../systems/stats';
 import {
-  colGain, COLLAPSE_MIN, collapseComplete, doCollapse, doNova, doSingularity, enterRift, importState, leaveRift, nextNovaAt,
+  colGain, COLLAPSE_MIN, GARDEN_HOPS, GARDEN_THREADS, collapseComplete, doCollapse, doNova, doSingularity, enterRift, importState, leaveRift, nextNovaAt,
   doMultiverse, mvGain, NOVA_MIN, novaGain, SING_MIN_LOG, singGain, singularityComplete, wipe,
 } from '../systems/prestige';
 import { currencyShop, refreshRunShop } from './shop';
@@ -224,7 +224,8 @@ export function refreshMultiversePane(): void {
   }
   const b5 = $('#beyond5');
   b5.hidden = !S.multiverses;
-  if (!b5.hidden) setHTML(b5, `Beyond: <b>???</b> Max every Multiverse upgrade (${TL.filter(u => S.tl[u.id] >= u.max).length} / ${TL.length}).`);
+  if (!b5.hidden) setHTML(b5, S.gardenOn ? 'Beyond: <b style="color:#7dffb0">the Garden is open.</b>'
+    : `Beyond: <b>???</b> Earn ${GARDEN_THREADS} Threads in total (${fmt(S.threadsEver)}) and send one chain through the bridge ${GARDEN_HOPS} times (best: ${S.hopBest}).`);
   refreshThreadShop();
 }
 

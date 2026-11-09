@@ -6,7 +6,10 @@ import { S } from '../state/state';
 import { stat } from '../systems/stats';
 import { ctx, field, size, type View } from './canvas';
 import { colorOf, CRY, WHITE } from './sprites';
-import { renderFieldGL } from './fieldGL';
+import { PATTERN_HUE, renderFieldGL } from './fieldGL';
+import { flowersOf } from '../sim/garden';
+import { FLOWER_REACH } from '../content/garden';
+import { NORMALS } from './sprites';
 
 const FONT = 'ui-sans-serif,system-ui,sans-serif';
 
@@ -109,6 +112,28 @@ function drawWorld2D(v: View): void {
     }
   }
 
+  // flowers (layer 6), as in fieldGL.ts
+  if (S.gardenOn) for (const f of flowersOf(world)) {
+    const col = NORMALS[f.seed.hue].rgb, g = Math.min(1, f.growth / stat.growNeed), rest = f.wilt > 0 ? .45 : 1;
+    ctx.strokeStyle = col;
+    if (f.seed.t !== 'cross') { ctx.globalAlpha = .06; ctx.lineWidth = 1.2 * thick; ctx.beginPath(); ctx.arc(f.x, f.y, FLOWER_REACH, 0, TAU); ctx.stroke(); }
+    ctx.globalAlpha = (.35 + .5 * g) * rest; ctx.lineWidth = 2.4 * thick;
+    ctx.beginPath(); ctx.arc(f.x, f.y, 26 + 14 * g, 0, TAU); ctx.stroke();
+    ctx.globalAlpha = .9;
+    const spr = NORMALS[f.seed.hue].spr;
+    for (let i = 0; i < 6; i++) {
+      const a = i * TAU / 6 + T * .4, r = 15 + 9 * g, s = (10 + 6 * g) * rest * 2;
+      ctx.drawImage(spr, f.x + Math.cos(a) * r - s / 2, f.y + Math.sin(a) * r - s / 2, s, s);
+    }
+    ctx.globalAlpha = 1; ctx.fillStyle = `hsl(${PATTERN_HUE[f.seed.p] ?? 140},100%,70%)`;
+    ctx.beginPath(); ctx.arc(f.x, f.y, 7, 0, TAU); ctx.fill();
+    if (f.glow > 0) {
+      ctx.globalAlpha = f.glow; ctx.strokeStyle = '#7dffb0'; ctx.lineWidth = 3 * thick;
+      ctx.beginPath(); ctx.arc(f.x, f.y, 30 + 90 * (1 - f.glow), 0, TAU); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
   // orbs
   for (const o of world.orbs) {
     const grow = Math.min(1, (T - o.born) * 4);
@@ -122,7 +147,7 @@ function drawWorld2D(v: View): void {
   for (const b of world.blasts) {
     const p = Math.min(1, b.age / b.dur), fade = b.age > b.dur ? 1 - (b.age - b.dur) / .35 : 1;
     const hue = b.kind === BlastKind.Volatile ? 350 : b.kind === BlastKind.Crystal ? 195 : b.kind === BlastKind.Drone ? 45
-      : b.kind === BlastKind.Mirror ? 275 : 190 + b.depth * 28;
+      : b.kind === BlastKind.Mirror ? 275 : b.kind === BlastKind.Bloom ? 140 : 190 + b.depth * 28;
     ctx.globalAlpha = Math.max(0, fade) * (b.kind === BlastKind.Crystal ? .4 : .85);
     ctx.strokeStyle = `hsl(${hue},100%,${b.kind === BlastKind.Drone ? 70 : 65}%)`;
     ctx.lineWidth = (b.kind === BlastKind.Volatile ? 4 : 2.4) * (1.4 - p * .6) * thick;

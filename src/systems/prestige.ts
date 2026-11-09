@@ -1,16 +1,22 @@
 import { initAudio, soundOn, tone } from '../audio';
-import { refreshAll } from '../core/app';
+import { clock, refreshAll } from '../core/app';
 import { fmt } from '../core/util';
 import { DU, memoryStardust, seedMoney, SU } from '../content/prestige';
 import { SL } from '../content/singularity';
-import { liveThreads, sparkDM } from '../content/multiverse';
+import { liveThreads, sparkDM, TL } from '../content/multiverse';
+import { GL } from '../content/garden';
+import { LL } from '../content/loom';
+import { eraGain } from '../content/bang';
+import { clearGardenFx, openGarden } from '../sim/garden';
+import { placeHeirloom, tickLoom } from './loom';
+import type { Chain } from './economy';
 import { riftById, RIFTS } from '../content/rifts';
 import type { RiftDef, UpgradeDef } from '../content/types';
 import { UP } from '../content/upgrades';
 import { field } from '../render/canvas';
 import { colorOf } from '../render/sprites';
 import { clearBoardFx, rebuildBoardMap } from '../sim/board';
-import { addBlast, BlastKind, bridgeText, burst, clearAll, clearHoles, clearRun, newMelody, screenFlash, world } from '../sim/world';
+import { activeWorlds, stillAll, addBlast, BlastKind, bridgeText, burst, newChain, useWorld, worlds, clearAll, clearHoles, clearRun, newMelody, screenFlash, world } from '../sim/world';
 import { clearSave, resumeSaving, save } from '../state/save';
 import { fresh, replaceState, S, type GameState } from '../state/state';
 import { toast } from '../ui/toast';
@@ -28,6 +34,7 @@ function resetRunLayer(): void {
   S.runTime = 0;
   for (const u of UP) S.lv[u.id] = 0;
   clearRun();
+  clearGardenFx();
 }
 
 function resetStardustLayer(): void {
@@ -59,6 +66,28 @@ function resetDarkLayer(): void {
  * replays the lower layers by itself instead of by hand.
  */
 const MV_KEEPS = ['keepAuto', 'autoStar', 'autoCol', 'keepBoard'];
+
+/**
+ * Thread upgrades a Big Bang keeps without Remembered Weave: the automation, Déjà Vu and the Laws
+ * of Physics (they change how a universe plays rather than how strong it is).
+ */
+const BANG_KEEPS_TL = ['dmAuto', 'deja', 'lawSquare', 'lawRepel', 'lawFlip', 'lawQuick'];
+
+/**
+ * Big Bang: the Loom, Knots, Pollen, Threads and every layer below go. Seeds and the garden layout,
+ * the Laws, the automation and the records stay; Era upgrades keep more.
+ */
+function resetBangLayer(): void {
+  S.loom.fill(0); S.knots = 0;
+  for (const u of LL) S.ll[u.id] = 0;
+  S.pollen = 0; S.crosses = 0;
+  if (!S.el.perennial) for (const u of GL) S.gl[u.id] = 0;
+  if (!S.el.weave) for (const u of TL) if (!BANG_KEEPS_TL.includes(u.id)) S.tl[u.id] = 0;
+  S.threads = 0; S.mvTime = 0;
+  resetSingularityLayer();
+  recalc(); // the Loom size for the Heirloom
+  if (S.el.heir) placeHeirloom(2 + S.el.heir);
+}
 
 /** Multiverse: everything below goes, except MV_KEEPS (and Rift seals with Déjà Vu). */
 function resetSingularityLayer(): void {
@@ -165,7 +194,7 @@ export function doNova(auto: boolean): void {
 
 /** Auto-Supernova: fire when it would at least double Stardust (held + spent on upgrades), or after 2 minutes in the run. */
 export function maybeAutoNova(): void {
-  if (!S.autoNova || !S.riftsDone.includes(4)) return;
+  if (!S.autoNova || !S.riftsDone.includes(4) || S.gathering) return;
   const g = novaGain();
   if (g && (g >= Math.max(1, S.stardust + spentOn(SU, S.st)) || S.runTime > 120)) doNova(true);
 }
@@ -193,7 +222,7 @@ export function doCollapse(auto = false): void {
 
 /** Auto-Collapse (Singularity upgrade): when it would at least double Dark Matter (held + spent), or after 5 minutes. */
 export function maybeAutoCollapse(): void {
-  if (!S.sl.autoCol || !S.autoCol) return;
+  if (!S.sl.autoCol || !S.autoCol || S.gathering) return;
   const g = colGain();
   if (g && (g >= Math.max(1, S.dm + spentOn(DU, S.dl)) || S.colTime > 300)) doCollapse(true);
 }
@@ -219,32 +248,131 @@ export function doSingularity(): void {
 }
 
 // ---------- Multiverse (layer 5) ----------
-export function doMultiverse(): void {
+export function doMultiverse(auto = false): void {
   const g = mvGain();
-  if (!g) return;
+  if (!g || S.gathering) return;
   const first = !S.multiverses;
   const { W, H } = field;
   for (const o of world.orbs) burst(o.x, o.y, '#7fd4ff', 5, 600, 2);
   resetSingularityLayer();
   S.threads += g; S.threadsEver += g; S.multiverses++;
+  S.mvTime = 0;
   if (first) S.melody = newMelody();
   recalc();
-  for (let i = 0; i < 10; i++) addBlast(W / 2, H / 2, Math.max(W, H) * (.1 + i * .1), 99, null, BlastKind.Mirror);
-  screenFlash('190,230,255', 1);
-  world.shake = 20;
-  initAudio(); tone(40, 3.5, .2, 'sine', 160); tone(1320, 2.5, .06, 'triangle', 330); tone(660, 3, .08, 'sine', 990);
+  for (let i = 0; i < (auto ? 4 : 10); i++) addBlast(W / 2, H / 2, Math.max(W, H) * (.1 + i * .1), 99, null, BlastKind.Mirror);
+  screenFlash('190,230,255', auto ? .4 : 1);
+  world.shake = auto ? 6 : 20;
+  initAudio();
+  if (auto) tone(660, 1, .06, 'sine', 990);
+  else { tone(40, 3.5, .2, 'sine', 160); tone(1320, 2.5, .06, 'triangle', 330); tone(660, 3, .08, 'sine', 990); }
   toast(`Multiverse! +${fmt(g)} ❖ Threads`, '#7fd4ff');
   if (first) setTimeout(() => toast('A second universe opened beside this one. Chains that reach the bridge carry on over there.', '#7fd4ff'), 1500);
   refreshAll();
   save(autoRateAvg());
 }
 
-/** Called every UI tick: track the cycle's peak (the Singularity gain), run Auto-Collapse, pay live Threads. */
+/** Called every UI tick: the cycle's peak, auto-prestiges, live Threads, layer unlocks, the Loom and the Big Bang. */
 export function tickPrestige(): void {
   if (S.runEarned > S.cyclePeak) S.cyclePeak = S.runEarned;
   if (S.sl.keepAuto && !S.dl.auto) S.dl.auto = 1; // Eternal Autobuyer, the tick after it is bought
   maybeAutoCollapse();
+  maybeAutoMultiverse();
   tickThreadFlow();
+  tickLoom();
+  checkUnlocks();
+  if (bang.chain && (bang.chain.over || clock.T - bang.t > 30)) finishBigBang();
+}
+
+// ---------- unlocks for layers 6-8 ----------
+export const GARDEN_THREADS = 250, GARDEN_HOPS = 3;
+export const LOOM_POLLEN = 400, LOOM_POT = 4;
+export const BANG_BEAD = 6, BANG_KNOTS = 20;
+
+export const gardenReady = (): boolean => S.threadsEver >= GARDEN_THREADS && S.hopBest >= GARDEN_HOPS;
+export const loomReady = (): boolean => S.gardenOn && S.pollenEver >= LOOM_POLLEN && S.potBest >= LOOM_POT;
+export const bangReady = (): boolean => S.loomOn && S.bestBead >= BANG_BEAD && S.knotsEver >= BANG_KNOTS;
+
+function checkUnlocks(): void {
+  if (!S.gardenOn && gardenReady()) {
+    openGarden();
+    celebrate('125,255,176', 'The Garden opened: two seeds are waiting in the Garden tab. Plant them on the field.', '#7dffb0');
+  }
+  if (!S.loomOn && loomReady()) {
+    S.loomOn = true;
+    celebrate('255,207,122', 'The Loom opened: chains of 100+ pops now drop beads. Merge them in the Loom tab.', '#ffcf7a');
+  }
+  if (!S.bangOn && bangReady()) {
+    S.bangOn = true;
+    celebrate('255,154,213', 'Big Bang unlocked: the Stillness gathers the field for one chain to end everything.', '#ff9ad5');
+  }
+}
+
+function celebrate(rgb: string, msg: string, col: string): void {
+  screenFlash(rgb, .6);
+  initAudio(); tone(523, .9, .08, 'triangle', 1046); tone(784, .9, .05, 'sine', 1568);
+  toast(msg, col);
+  refreshAll();
+}
+
+/** Seasons (Garden upgrade): open a Multiverse when it pays enough, or after 10 minutes. */
+function maybeAutoMultiverse(): void {
+  if (!S.gl.seasons || !S.autoMv || !S.multiverses || S.gathering || S.rift) return;
+  const g = mvGain();
+  if (g && ((S.mvTime > 120 && g >= Math.max(5, S.threadsLive)) || S.mvTime > 600)) doMultiverse(true);
+}
+
+// ---------- Big Bang (layer 8) ----------
+/** The chain the Big Bang set off, and when; it pays out (and resets) once that chain is over. */
+const bang = { chain: null as Chain | null, t: 0 };
+
+export const bangInProgress = (): boolean => bang.chain !== null;
+
+/** Orbs on the field in every universe: what a Big Bang would set off right now. */
+export const gatheredOrbs = (): number => activeWorlds().reduce((n, w) => n + w.orbs.length, 0);
+
+export function setGathering(on: boolean): void {
+  if (on && (!S.bangOn || S.rift || bangInProgress())) return;
+  S.gathering = on;
+  if (on) { stillAll(); clearGardenFx(); }
+  recalc();
+  if (on) { screenFlash('255,196,232', .35); toast('The Stillness: nothing detonates now. Let the field fill, then set off the Big Bang.', '#ff9ad5'); }
+  refreshAll();
+}
+
+/** Set off every orb in every universe as one chain. The Eras and the reset come when it ends. */
+export function doBigBang(): void {
+  if (!S.gathering || bangInProgress() || eraGain(gatheredOrbs(), stat.eraMult) < 1) return;
+  S.gathering = false;
+  recalc();
+  useWorld(worlds[0]);
+  const ch = newChain(field.W / 2, field.H / 2, false);
+  for (const w of activeWorlds()) {
+    useWorld(w);
+    addBlast(field.W / 2, field.H / 2, Math.max(field.W, field.H) * 1.05, 0, ch, BlastKind.Volatile);
+    for (let i = 0; i < 5; i++) addBlast(field.W / 2, field.H / 2, Math.max(field.W, field.H) * (.2 + i * .2), 99, null, BlastKind.Bloom);
+    screenFlash('255,240,250', 1);
+    w.shake = 24;
+  }
+  useWorld(worlds[0]);
+  bang.chain = ch; bang.t = clock.T;
+  initAudio(); tone(30, 4, .25, 'sawtooth', 15); tone(1760, 3, .06, 'sine', 110); tone(110, 3.5, .15, 'triangle', 440);
+  refreshAll();
+}
+
+function finishBigBang(): void {
+  const ch = bang.chain!;
+  bang.chain = null;
+  const g = Math.max(1, eraGain(ch.count, stat.eraMult));
+  const first = !S.bangs;
+  resetBangLayer();
+  S.eras += g; S.erasEver += g; S.bangs++;
+  recalc();
+  screenFlash('255,154,213', .8);
+  initAudio(); tone(523, 2, .08, 'triangle', 2093);
+  toast(`Big Bang! The chain popped ${fmt(ch.count)} orbs: +${fmt(g)} ◈ Eras`, '#ff9ad5');
+  if (first) setTimeout(() => toast('A new era. Your seeds and garden survived; spend Eras in the Big Bang tab.', '#ff9ad5'), 1500);
+  refreshAll();
+  save(autoRateAvg());
 }
 
 // ---------- Rifts ----------

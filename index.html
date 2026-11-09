@@ -34,6 +34,9 @@
       <button data-t="col" id="colTab" hidden>Collapse</button>
       <button data-t="sing" id="singTab" hidden>Singularity</button>
       <button data-t="mv" id="mvTab" hidden>Multiverse</button>
+      <button data-t="garden" id="gardenTab" hidden>Garden</button>
+      <button data-t="loom" id="loomTab" hidden>Loom</button>
+      <button data-t="bang" id="bangTab" hidden>Big Bang</button>
       <button data-t="stats">Stats</button>
       <button id="mute" title="Toggle sound">♪ On</button>
     </div>
@@ -93,7 +96,46 @@
       <div class="help" id="lawBox" hidden></div>
       <div class="cat">Multiverse upgrades</div>
       <div id="tlList" class="list"></div>
-      <div class="help" id="beyond5" hidden>Beyond: <b>???</b> Max every Multiverse upgrade.</div>
+      <div class="help" id="beyond5" hidden></div>
+    </div>
+    <div id="pane-garden" class="pane" hidden>
+      <div class="novabox" style="background:linear-gradient(160deg,#0c2418,#0a120f);border-color:#1f5a3c">
+        <div class="sd" style="color:#7dffb0"><span id="pollenCount">0</span> ✿ Pollen</div>
+        <p>Plant seeds on the orb field. Pops around a flower make it grow, and when it <b style="color:#c8ffe0">blooms</b> it fires its pattern as part of the chain that fed it, with that chain's depth wound back, so the chain keeps going. Each seed has genes: a <b style="color:#c8ffe0">pattern</b> (what a bloom fires), a <b style="color:#c8ffe0">trigger</b> (what makes it grow), a colour and a potency. <b style="color:#c8ffe0">Cross</b> two seeds to breed new ones. Blooms pay Pollen, and all Pollen ever earned multiplies Thread gain.</p>
+        <div id="gardenInfo" style="font-size:13px"></div>
+        <label class="toggle" id="autoMvRow" hidden style="margin-top:10px"><input type="checkbox" id="autoMv"> Auto-Multiverse (Seasons)</label>
+      </div>
+      <div class="cat">Seed bank</div>
+      <div id="seedList" class="list"></div>
+      <button class="bigbtn" id="crossBtn" style="background:linear-gradient(90deg,#3ddc84,#c8ffe0);color:#06140c" disabled>Cross two seeds</button>
+      <div class="cat">Garden upgrades</div>
+      <div id="glList" class="list"></div>
+      <div class="help" id="beyond6"></div>
+    </div>
+    <div id="pane-loom" class="pane" hidden>
+      <div class="novabox" style="background:linear-gradient(160deg,#2a1f0a,#120e06);border-color:#6b5222">
+        <div class="sd" style="color:#ffcf7a"><span id="knotCount">0</span> ⌘ Knots</div>
+        <p>Every chain of <b style="color:#ffe9c2">100+ pops</b> drops a bead on the Loom: tier 1 at 100 pops, 2 at 1K, 3 at 10K. Tap a bead, then another of the same tier, to <b style="color:#ffe9c2">merge</b> them into the next tier. Beads on the Loom multiply orb value, the best one multiplies Pollen, and merging into tier 3 or more pays Knots. A full Loom drops nothing.</p>
+        <div id="loomInfo" style="font-size:13px"></div>
+        <label class="toggle" id="autoMergeRow" hidden style="margin-top:10px"><input type="checkbox" id="autoMerge"> Shuttle: merge matching beads for me</label>
+      </div>
+      <div id="loomGrid" class="loom"></div>
+      <div class="cat">Loom upgrades</div>
+      <div id="llList" class="list"></div>
+      <div class="help" id="beyond7"></div>
+    </div>
+    <div id="pane-bang" class="pane" hidden>
+      <div class="novabox" style="background:linear-gradient(160deg,#2a0f22,#120610);border-color:#6b2a55">
+        <div class="sd" style="color:#ff9ad5"><span id="eraCount">0</span> ◈ Eras</div>
+        <p>Begin the <b style="color:#ffd6ee">Stillness</b>: nothing detonates, drones rest, and the field fills far past its usual cap. When it is full enough, set off the <b style="color:#ffd6ee">Big Bang</b>: every orb in every universe goes off as one chain. Eras come from how many it pops. Afterwards everything resets except the automation, the Laws of Physics, your seeds and your garden.</p>
+        <div id="bangInfo" style="font-size:13px"></div>
+        <div class="bar"><i id="bangBar" style="background:linear-gradient(90deg,#ff5fb8,#ffd6ee)"></i></div>
+        <button class="bigbtn" id="gatherBtn" style="background:linear-gradient(90deg,#8a3a6e,#ff9ad5);color:#fff;margin-bottom:8px">Begin the Stillness</button>
+        <button class="bigbtn" id="bangBtn" style="background:linear-gradient(90deg,#ff5fb8,#fff0f8);color:#2a0418" disabled>BIG BANG</button>
+      </div>
+      <div class="cat">Era upgrades</div>
+      <div id="elList" class="list"></div>
+      <div class="help" id="beyond8"></div>
     </div>
     <div id="pane-stats" class="pane" hidden>
       <div class="stats" id="statsBox"></div>

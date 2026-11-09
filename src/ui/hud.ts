@@ -6,9 +6,11 @@ import { layout, setLayout } from '../render/canvas';
 import { NORMALS } from '../render/sprites';
 import { S } from '../state/state';
 import { rateAvg } from '../systems/economy';
-import { colGain, collapseComplete, mvGain, novaGain, singGain, singularityComplete } from '../systems/prestige';
+import { bangInProgress, colGain, collapseComplete, gatheredOrbs, mvGain, novaGain, singGain, singularityComplete } from '../systems/prestige';
+import { eraGain } from '../content/bang';
 import { stat } from '../systems/stats';
 import { refreshCollapsePane, refreshMultiversePane, refreshNovaPane, refreshSingPane, refreshStatsPane } from './panes';
+import { refreshBangPane, refreshGardenPane, refreshLoomPane } from './layers';
 import { refreshPalette, setView } from './palette';
 import { refreshPins } from './pins';
 import { refreshRunShop } from './shop';
@@ -16,7 +18,7 @@ import { toast } from './toast';
 
 const el = {
   money: $('#money'), rate: $('#rate'), ready: $('#ready'), riftHud: $('#riftHud'), combo: $('#combo'),
-  novaTab: $('#novaTab'), colTab: $('#colTab'), singTab: $('#singTab'), mvTab: $('#mvTab'), melodyHud: $('#melodyHud'), uniBtn: $('#uniBtn'), dilHud: $('#dilHud'), viewBtns: $('#viewBtns'), autoBuyRow: $('#autoBuyRow'),
+  novaTab: $('#novaTab'), colTab: $('#colTab'), singTab: $('#singTab'), mvTab: $('#mvTab'), gardenTab: $('#gardenTab'), loomTab: $('#loomTab'), bangTab: $('#bangTab'), melodyHud: $('#melodyHud'), uniBtn: $('#uniBtn'), dilHud: $('#dilHud'), viewBtns: $('#viewBtns'), autoBuyRow: $('#autoBuyRow'),
   autoBuy: $<HTMLInputElement>('#autoBuy'), mute: $('#mute'), buyamt: $('#buyamt'),
 };
 
@@ -63,7 +65,9 @@ export function buildHud(): void {
     if (S.starsCycle < 300 && !S.collapses) el.colTab.hidden = true;
     if (!collapseComplete() && !S.singularities) el.singTab.hidden = true;
     if (!singularityComplete() && !S.multiverses) el.mvTab.hidden = true;
-    if (el.novaTab.hidden && app.tab === 'nova' || el.colTab.hidden && app.tab === 'col' || el.singTab.hidden && app.tab === 'sing' || el.mvTab.hidden && app.tab === 'mv') selectTab('up');
+    el.gardenTab.hidden = !S.gardenOn; el.loomTab.hidden = !S.loomOn; el.bangTab.hidden = !S.bangOn;
+    const hiddenTab = { nova: el.novaTab, col: el.colTab, sing: el.singTab, mv: el.mvTab, garden: el.gardenTab, loom: el.loomTab, bang: el.bangTab }[app.tab as string];
+    if (hiddenTab?.hidden) selectTab('up');
     refreshRunShop();
   });
 }
@@ -74,6 +78,9 @@ export function refreshVisibleTab(): void {
   if (app.tab === 'col') refreshCollapsePane();
   if (app.tab === 'sing') refreshSingPane();
   if (app.tab === 'mv') refreshMultiversePane();
+  if (app.tab === 'garden') refreshGardenPane();
+  if (app.tab === 'loom') refreshLoomPane();
+  if (app.tab === 'bang') refreshBangPane();
   if (app.tab === 'stats') refreshStatsPane();
 }
 
@@ -115,6 +122,8 @@ export function tickHud(): void {
     el.mvTab.hidden = false;
     if (S.playTime > 1) toast('Multiverse unlocked', '#7fd4ff');
   }
+  // layers 6-8 open themselves (prestige.ts checkUnlocks); their tabs follow
+  el.gardenTab.hidden = !S.gardenOn; el.loomTab.hidden = !S.loomOn; el.bangTab.hidden = !S.bangOn;
   // Multiverse: the view buttons show from the start, and a phone gets a switch: both stacked, A, B
   if (multiverseOn()) el.viewBtns.hidden = false;
   el.uniBtn.hidden = !multiverseOn() || layout.split || app.view !== 'orbs';
@@ -132,6 +141,12 @@ export function tickHud(): void {
     el.dilHud.classList.toggle('flare', flare);
   } else setText(el.dilHud, '');
 
+  if (S.gathering || bangInProgress()) {
+    setText(el.ready, bangInProgress() ? '◈ BIG BANG ◈' : `◈ Stillness · ${fmt(gatheredOrbs())} orbs · +${fmt(eraGain(gatheredOrbs(), stat.eraMult))} ◈`);
+    el.ready.style.color = '#ff9ad5';
+    el.ready.classList.add('on');
+    return;
+  }
   const mg = mvGain() > 0, sg = singGain() > 0, cg = colGain() > 0;
   setText(el.ready, mg ? '❖ Multiverse ready ❖' : sg ? '◉ Singularity ready ◉' : cg ? '◆ Collapse ready ◆' : '✦ Supernova ready ✦');
   el.ready.style.color = mg ? '#7fd4ff' : sg ? '#ffb35c' : cg ? '#c9a6ff' : '';

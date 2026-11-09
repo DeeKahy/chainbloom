@@ -3,6 +3,9 @@ import { app } from './core/app';
 import { cv } from './render/canvas';
 import { board, boardClick, inBoard, pixHex } from './sim/board';
 import { detonateAt, multiverseOn, useWorld, worlds } from './sim/world';
+import { plantAt } from './sim/garden';
+import { refreshAll } from './core/app';
+import { toast } from './ui/toast';
 
 const local = (e: PointerEvent): [number, number] => {
   const r = cv.getBoundingClientRect();
@@ -15,8 +18,17 @@ function detonateOnScreen(x: number, y: number): void {
     const v = w.view;
     if (!v.visible || (w.index && !multiverseOn())) continue;
     if (x < v.x || x > v.x + v.w || y < v.y || y > v.y + v.h) continue;
+    const wx = (x - v.x) / v.scale, wy = (y - v.y) / v.scale;
+    if (app.planting !== null) {
+      // planting a seed (Garden tab): this tap places it instead of detonating
+      if (plantAt(app.planting, w.index, wx, wy)) toast('Planted. Pops around it make it grow.', '#7dffb0');
+      else toast('Every bed is in use: uproot a flower first.', '#ff5a6e');
+      app.planting = null;
+      refreshAll();
+      return;
+    }
     useWorld(w);
-    detonateAt((x - v.x) / v.scale, (y - v.y) / v.scale);
+    detonateAt(wx, wy);
     useWorld(worlds[0]);
     return;
   }

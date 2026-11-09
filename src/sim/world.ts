@@ -20,7 +20,7 @@ export interface Orb {
   /** Entangled twin in the other universe (layer 5): popping one pops the other. */
   twin?: Orb | null;
 }
-export const enum BlastKind { Normal = 0, Critical = 1, Volatile = 2, Crystal = 3, Drone = 4, Mirror = 5 }
+export const enum BlastKind { Normal = 0, Critical = 1, Volatile = 2, Crystal = 3, Drone = 4, Mirror = 5, Bloom = 6 }
 export interface Blast {
   x: number; y: number; R: number; r: number; depth: number; ch: Chain | null;
   age: number; dur: number; born: number; kind: BlastKind; done: boolean;
@@ -145,10 +145,21 @@ export const shared = {
   lastChain: { count: 0, total: 0, depth: 0 },
 };
 
+/**
+ * The Garden (layer 6) lives in sim/garden.ts and plugs in here, so world.ts doesn't import it:
+ * every pop is offered to the flowers of the current universe, and each universe update ticks them.
+ */
+export const gardenHooks = {
+  pop: null as ((o: Orb, depth: number, ch: Chain | null) => void) | null,
+  update: null as ((dt: number) => void) | null,
+};
+
 /** Hooks so the simulation stays DOM-free: the UI fills these in. */
 export const hooks = {
   banner: (_count: number) => { /* set by ui */ },
   chainFinished: (_c: Chain) => { /* set by board */ },
+  /** Layer 7: a finished chain may drop a bead on the Loom. */
+  bead: (_c: Chain) => { /* set by loom */ },
   flare: () => { /* set by ui */ },
   melody: (_bonus: number) => { /* set by ui */ },
 };
@@ -243,7 +254,7 @@ function maybeEntangle(o: Orb): void {
 }
 
 export function newChain(x: number, y: number, auto = false): Chain {
-  const c: Chain = { x, y, total: 0, count: 0, last: clock.T, maxD: 0, auto, home: world.index, cross: 0, notes: '', sang: false };
+  const c: Chain = { x, y, total: 0, count: 0, last: clock.T, maxD: 0, auto, home: world.index, cross: 0, hops: 0, notes: '', sang: false };
   world.chains.push(c);
   return c;
 }
@@ -277,6 +288,7 @@ function detonation(x: number, y: number, R: number, kind: BlastKind, auto: bool
 
 /** Player click on the orb field (in the current universe). */
 export function detonateAt(x: number, y: number): void {
+  if (S.gathering) { burst(x, y, '#ffc4e8', 4, 30, .4); return; } // the Stillness: nothing detonates
   detonation(x, y, stat.clickR, BlastKind.Normal, false);
   burst(x, y, '#e8ecff', 6, 60, .3);
 }
@@ -287,6 +299,7 @@ function pop(o: Orb, depth: number, ch: Chain | null): void {
   const col = colorOf(o);
   const inWell = world.wells.length > 0 && inWellGlow(o.x, o.y);
   payout(stat.value * col.mult * stat.combo ** depth * (inWell ? stat.wellMult : 1), ch);
+  if (gardenHooks.pop) gardenHooks.pop(o, depth, ch);
   if (stat.hole) feedHole(o.x, o.y);
   if (inWell) burst(o.x, o.y, '#b98bff', 5, 90, .45);
   if (ch) {
@@ -354,7 +367,7 @@ function growCrystal(): void {
 }
 
 /** Drones aim at a random sample of orbs and pick the one with the most neighbours. */
-function findTarget(): Orb | null {
+export function findTarget(): Orb | null {
   const alive = world.orbs.filter(o => !o.dead && !o.crit);
   if (alive.length < 2) return null;
   let best: Orb | null = null, bestN = -1;
@@ -382,9 +395,11 @@ function finishChain(c: Chain): void {
     hooks.melody(bonus);
   }
   if (c.count > S.best) S.best = c.count;
+  if (c.hops > S.hopBest) S.hopBest = c.hops;
   if (c.cross > S.crossBest) S.crossBest = c.cross;
   if (c.count) shared.lastChain = { count: c.count, total: c.total, depth: c.maxD };
   hooks.chainFinished(c);
+  hooks.bead(c);
   if (app.view === 'board') return;
   if (c.count >= 1 && world.texts.length < 70) {
     const big = Math.log2(c.count + 1);
@@ -418,6 +433,15 @@ export function clearAll(): void {
   }
 }
 
+/** The Stillness begins: every blast in flight fizzles, so the chains running now end. */
+export function stillAll(): void {
+  for (const w of worlds) {
+    for (const b of w.blasts) b.done = true;
+    w.inbox.blasts = []; w.inbox.pops = []; w.inbox.mirrors = [];
+    for (const o of w.orbs) o.crit = 0;
+  }
+}
+
 /** Reset both black holes (Singularity and Multiverse). */
 export function clearHoles(): void {
   for (const w of worlds) { w.mass = 0; w.flareT = 0; }
@@ -435,6 +459,7 @@ export function tickGlobal(dt: number): void {
   S.playTime += dt;
   S.runTime += dt;
   S.colTime += dt;
+  S.mvTime += dt;
   refillBudget(dt);
   tickRate(dt);
 }
@@ -597,7 +622,7 @@ export function updateField(dt: number): void {
     b.age += dt;
     const p = Math.min(1, b.age / b.dur);
     b.r = b.R * (1 - (1 - p) ** 3);
-    if (b.done) continue;
+    if (b.done || S.gathering) continue; // the Stillness: blasts still fade out, but pop nothing
     if (b.sq) {
       // Law: Square Blasts. Same radius, but the reach is a square, so it covers the corners too.
       near(grid, b.x, b.y, b.r + 9, o => {
@@ -614,6 +639,7 @@ export function updateField(dt: number): void {
     // The bridge: a blast that reaches it carries on in the other universe, as part of the same chain
     if (mv && !b.jumped && b.ch && b.kind !== BlastKind.Crystal && atBridge(b)) {
       b.jumped = true;
+      b.ch.hops++;
       const there = other(world);
       // it comes out of the other gate at the same offset along the edge
       const g = gate(world), tg = gate(there);
@@ -667,6 +693,8 @@ export function updateField(dt: number): void {
   });
   for (const b of world.beams) b.life -= dt;
   world.beams = world.beams.filter(b => b.life > 0);
+
+  if (gardenHooks.update) gardenHooks.update(dt);
 
   // particles & texts
   const pd = 1 - 2.2 * dt;
