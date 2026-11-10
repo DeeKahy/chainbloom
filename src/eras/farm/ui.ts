@@ -2,7 +2,7 @@ import { initAudio, tone } from '../../audio';
 import type { BuyAmount } from '../../core/app';
 import { $, fmt, replayClass, setClass, setHTML, setText } from '../../core/util';
 import { exportSave, parseImport, replaceAndReload } from '../../state/save';
-import { fresh, S } from '../../state/state';
+import { S } from '../../state/state';
 import { currencyShop } from '../../ui/shop';
 import { armed, toast } from '../../ui/toast';
 import { FL, growTime, HUES, patternOf, potFactor, strainName, type Strain } from './content';
@@ -57,7 +57,6 @@ const HTML = `
       <textarea id="fsaveText" rows="3" spellcheck="false" placeholder="Export copies your save here (and to the clipboard). Paste one here to import."></textarea>
     </div>
     <button class="fwipe" id="freset">Start the farm over (an empty meadow, no Pollen)</button>
-    <button class="fwipe" id="fwipe">Wipe save and start over from the stars</button>
   </div>
 </aside>`;
 
@@ -133,11 +132,6 @@ export function buildUi(root: HTMLElement): void {
   reset.addEventListener('click', () => {
     if (!armed(reset, 'Really start the farm over? Click again')) return;
     replaceAndReload({ ...S, farm: { ...freshFarm(), since: Date.now() }, lastRate: 0 });
-  });
-  const wipe = $<HTMLButtonElement>('#fwipe');
-  wipe.addEventListener('click', () => {
-    if (!armed(wipe, 'Really erase everything, farm and stars? Click again')) return;
-    replaceAndReload(fresh());
   });
   refreshSeeds();
 }
