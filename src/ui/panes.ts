@@ -7,7 +7,7 @@ import { AUTO_NOVA_RIFT, RIFTS } from '../content/rifts';
 import { refreshPins } from './pins';
 import { STAT_ROWS, togglePin } from './statRows';
 import type { RiftDef } from '../content/types';
-import { exportSave, parseImport } from '../state/save';
+import { exportSave, parseImport, replaceAndReload } from '../state/save';
 import { S } from '../state/state';
 import { stat } from '../systems/stats';
 import {
@@ -237,6 +237,8 @@ export function buildStatsPane(): void {
     try { next = parseImport(box.value); }
     catch (e) { toast('Import failed: ' + (e instanceof Error ? e.message : 'invalid save'), '#ff5a6e'); return; }
     if (!armed(importBtn, 'Click again: replaces your current save')) return;
+    // A save from another era needs that era's page: reload into it.
+    if (next.era !== S.era) { replaceAndReload(next); return; }
     importState(next);
     box.value = '';
     toast('Save imported', '#7dffb0');

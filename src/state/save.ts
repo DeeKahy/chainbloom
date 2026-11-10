@@ -1,3 +1,4 @@
+import { normalizeFarm } from '../eras/farm/state';
 import { fresh, replaceState, S, sanitizeState, SAVE_VERSION, type GameState } from './state';
 
 /** Kept from the original single-file game so existing saves still load. */
@@ -59,6 +60,10 @@ const MIGRATIONS: ((d: RawSave) => void)[] = [
     const tl = d.tl as Record<string, number> | undefined;
     if (tl) for (const id of ['lawSquare', 'lawFlip', 'lawQuick', 'lawRepel']) delete tl[id];
   },
+  // 10 → 11: eras. Every save so far is in the space era; the farm starts empty (fresh() fills it).
+  d => {
+    if (typeof d.era !== 'number') d.era = 0;
+  },
 ];
 
 /**
@@ -87,6 +92,8 @@ export function normalize(raw: unknown): GameState {
   // nested shapes a hand-edited or damaged save could break
   if (!out.garden || !Array.isArray(out.garden.seeds) || !Array.isArray(out.garden.beds)) out.garden = fresh().garden;
   if (!Array.isArray(out.loom) || out.loom.length !== fresh().loom.length) out.loom = fresh().loom;
+  out.farm = normalizeFarm(d.farm);
+  if (typeof out.era !== 'number' || out.era < 0) out.era = 0;
   out.version = newer ? (d.version as number) : SAVE_VERSION;
   return out;
 }
@@ -157,4 +164,15 @@ export function parseImport(text: string): GameState {
 /** An explicit import replaces whatever was stored, so saving may resume. */
 export function resumeSaving(): void {
   loadFailed = false;
+}
+
+/**
+ * Replace the whole game (import, wipe) and reload, so the era the new save is in boots cleanly.
+ * The state is swapped first, so the save made on unload writes the new game, not the old one.
+ */
+export function replaceAndReload(next: GameState): void {
+  replaceState(next);
+  loadFailed = false;
+  save(0);
+  location.reload();
 }

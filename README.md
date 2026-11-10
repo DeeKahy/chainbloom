@@ -1,6 +1,6 @@
 # Chainbloom
 
-A chain-reaction idle game. Click the field to detonate orbs, build chains, go Supernova, Collapse, and wire up the Constellation.
+A chain-reaction idle game. Click the field to detonate orbs, build chains, go Supernova, Collapse, and wire up the Constellation. Then hang up your hat and become a farmer: a meadow where blooms spread from flower to flower.
 
 TypeScript + Vite, canvas 2D, no runtime dependencies. The build is a static site.
 
@@ -20,7 +20,8 @@ npm run build      # type-check + bundle into dist/
 | `src/sim/` | Per-frame simulation: the orb field (`world.ts`) and the constellation (`board.ts`). No DOM. |
 | `src/render/` | Canvas drawing, sprites. |
 | `src/ui/` | Side panel, shops, HUD, palette, toasts. |
-| `src/main.ts` | Boot and the frame loop. |
+| `src/main.ts` | Boot and the frame loop, shared by every era. |
+| `src/eras/` | One folder per era (`era.ts` explains). `space/` wraps the folders above; `farm/` holds the whole farm era: content, simulation, renderer, UI, CSS and its intro. |
 
 ## Adding things
 

@@ -1,5 +1,5 @@
 import { initAudio, tone } from '../audio';
-import { app } from '../core/app';
+import { app, type BuyAmount } from '../core/app';
 import { fmt, replayClass, setClass, setHTML, setText } from '../core/util';
 import type { RunUpgradeDef, UpgradeDef } from '../content/types';
 import { UP } from '../content/upgrades';
@@ -39,6 +39,10 @@ export interface CurrencyShopOptions {
   unit: string;
   sound: [f: number, dur: number, endF: number];
   onBuy: () => void;
+  /** Buy ×1 / ×10 / Max setting; defaults to the space era's shared one. */
+  buyN?: () => BuyAmount;
+  /** Recompute derived stats after a purchase; defaults to the space era's recalc(). */
+  recalc?: () => void;
 }
 
 /**
@@ -46,10 +50,10 @@ export interface CurrencyShopOptions {
  * ceil(base × g^l). ×10 prices the full 10 (capped at max) and buys only if all are affordable;
  * Max buys as many as the balance covers, and shows the next single level when none are.
  */
-function currencyCost(u: UpgradeDef, l: number, bal: number): [count: number, cost: number] {
+function currencyCost(u: UpgradeDef, l: number, bal: number, buyN: BuyAmount): [count: number, cost: number] {
   if (l >= u.max) return [0, 0];
-  const max = app.buyN === 'max';
-  const want = max ? Infinity : +app.buyN;
+  const max = buyN === 'max';
+  const want = max ? Infinity : +buyN;
   let n = 0, c = 0;
   while (l + n < u.max && n < want && n < 500) {
     const next = Math.ceil(u.base * u.g ** (l + n));
@@ -63,16 +67,17 @@ function currencyCost(u: UpgradeDef, l: number, bal: number): [count: number, co
 /** Builds the cards once and returns a refresh function. Follows the shared Buy ×1 / ×10 / Max setting. */
 export function currencyShop(o: CurrencyShopOptions): () => void {
   setHTML(o.box, '');
+  const buyN = o.buyN ?? (() => app.buyN), recalcFn = o.recalc ?? recalc;
   const cards = new Map<string, Card>();
   for (const u of o.defs) {
     const card = makeCard('up ' + o.cls, el => {
       const lv = o.levels(), l = lv[u.id];
       if (l >= u.max) return;
-      const [n, c] = currencyCost(u, l, o.balance());
+      const [n, c] = currencyCost(u, l, o.balance(), buyN());
       if (o.balance() < c) return;
       o.spend(c);
       lv[u.id] += n;
-      recalc();
+      recalcFn();
       replayClass(el, 'flash');
       initAudio();
       tone(o.sound[0], o.sound[1], .07, 'triangle', o.sound[2]);
@@ -94,7 +99,7 @@ export function currencyShop(o: CurrencyShopOptions): () => void {
         setText(c.cost, single ? 'OWNED' : 'MAX');
         continue;
       }
-      const [n, cost] = currencyCost(u, l, bal);
+      const [n, cost] = currencyCost(u, l, bal, buyN());
       setClass(c.el, `up ${o.cls}` + (bal >= cost ? ' afford' : ''));
       setText(c.ds, u.desc(l, l + n, stat));
       setText(c.cost, `${fmt(cost)} ${o.unit}` + (n > 1 ? `  (×${n})` : ''));

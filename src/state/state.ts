@@ -6,8 +6,9 @@ import { TL } from '../content/multiverse';
 import { GL, type Bed, type Seed } from '../content/garden';
 import { LL, LOOM_MAX } from '../content/loom';
 import { EL } from '../content/bang';
+import { freshFarm, type FarmState } from '../eras/farm/state';
 
-export const SAVE_VERSION = 10;
+export const SAVE_VERSION = 11;
 
 export interface BoardNode {
   q: number;
@@ -21,6 +22,10 @@ export interface BoardNode {
 /** Everything that persists in the save. Transient simulation state lives in sim/world.ts. */
 export interface GameState {
   version: number;
+  /** Which era is being played (index into ERAS in src/eras/era.ts): 0 space, 1 farm. */
+  era: number;
+  /** Era 2: the farm. Space fields below stay frozen once the farm starts. */
+  farm: FarmState;
   // layer 1: money
   money: number;
   runEarned: number;
@@ -122,7 +127,7 @@ const levels = (defs: { id: string }[]): Record<string, number> =>
 
 export function fresh(): GameState {
   return {
-    version: SAVE_VERSION,
+    version: SAVE_VERSION, era: 0, farm: freshFarm(),
     money: 0, runEarned: 0, total: 0, lv: levels(UP), seen: [], runTime: 0,
     stardust: 0, starsEver: 0, starsCycle: 0, st: levels(SU), novas: 0, autoNova: false,
     dm: 0, dmEver: 0, collapses: 0, dl: levels(DU), board: [], flux: 0, fluxEver: 0, pulseBank: 0,
@@ -163,5 +168,7 @@ export function sanitizeState(): boolean {
   for (const k of Object.keys(top)) fix(top, k);
   for (const m of [S.lv, S.st, S.dl, S.sl, S.tl, S.gl, S.ll, S.el]) for (const k of Object.keys(m)) fix(m, k);
   for (const n of S.board) fix(n as unknown as Record<string, unknown>, 'c');
+  const farm = S.farm as unknown as Record<string, unknown>;
+  for (const k of Object.keys(farm)) fix(farm, k);
   return ok;
 }

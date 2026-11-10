@@ -1,121 +1,87 @@
 import './style.css';
-import { app, refreshAll } from './core/app';
-import { $, fmt } from './core/util';
-import { bindInput } from './input';
-import { renderBoard } from './render/board';
-import { resize } from './render/canvas';
-import { gfx, glCv, clearCanvas, setLayout } from './render/canvas';
-import { renderField, renderFieldWithGL } from './render/field';
-import { initFieldGL } from './render/fieldGL';
-import { rebuildBoardMap, updateBoard } from './sim/board';
-import { activeWorlds, multiverseOn, spawnOrb, tickGlobal, updateField, useWorld, world, worlds } from './sim/world';
+import { $ } from './core/util';
+import { ERAS, setNextEraHandler, type Era } from './eras/era';
 import { load, save } from './state/save';
-import { S, sanitizeState } from './state/state';
-import { autoBuy, autoBuyDark, autoBuyStardust, autoRateAvg } from './systems/economy';
-import { applyOfflineEarnings, checkRiftGoal, maybeAutoNova, tickPrestige } from './systems/prestige';
-import { recalc } from './systems/stats';
-import { buildHud, frameHud, tickHud } from './ui/hud';
-import { buildPalette } from './ui/palette';
-import { buildPins } from './ui/pins';
-import { buildCollapsePane, buildMultiversePane, buildNovaPane, buildSingPane, buildStatsPane } from './ui/panes';
-import { buildRunShop } from './ui/shop';
-import { buildBangPane, buildGardenPane, buildLoomPane } from './ui/layers';
+import { S } from './state/state';
 import { toast } from './ui/toast';
 
-// ---------- boot ----------
-load();
-recalc();
-gfx.gl = initFieldGL(() => {
-  // GPU context lost (driver reset, memory pressure): carry on with the 2D renderer.
-  gfx.gl = false;
-  glCv.style.display = 'none';
-  clearCanvas();
-});
-if (!gfx.gl) glCv.style.display = 'none';
-setLayout(multiverseOn());
-resize();
-new ResizeObserver(resize).observe($('#stage'));
+/**
+ * Boot and main loop, shared by every era. Everything game-specific lives in the era module
+ * (src/eras/<name>/): main.ts only loads the current one, runs its frame/tick, saves, and pays
+ * for time the game did not run.
+ */
 
-buildRunShop($('#pane-up'), () => tickHud());
-buildNovaPane();
-buildCollapsePane();
-buildSingPane();
-buildMultiversePane();
-buildGardenPane();
-buildLoomPane();
-buildBangPane();
-buildStatsPane();
-buildPalette();
-buildPins();
-buildHud();
-rebuildBoardMap();
-bindInput();
-
-requestAnimationFrame(() => { resize(); for (let i = 0; i < 14; i++) spawnOrb(); });
-
-const offline = applyOfflineEarnings();
-if (offline) setTimeout(() => toast(`While you were away, your drones earned $${fmt(offline)}`, '#ffd34d'), 400);
-refreshAll();
-
-// ---------- main loop ----------
 const UI_INTERVAL = .12;
 const SAVE_INTERVAL = 5;
-let last = performance.now(), uiT = 0, saveT = 0;
-let capWarned = false;
+/** Longest stretch of missed time an era is paid for. */
+const CATCH_UP_MAX = 7200;
 
-function frame(now: number): void {
-  if (debug.paused) { last = now; requestAnimationFrame(frame); return; }
-  const dt = Math.min(.05, (now - last) / 1000);
-  last = now;
+let era: Era;
+/** Set while a transition between eras plays: the old era stops updating. */
+let switching = false;
 
-  const t0 = performance.now();
-  tickGlobal(dt);
-  for (const w of activeWorlds()) {
-    useWorld(w);
-    updateField(dt);
-  }
-  useWorld(worlds[0]);
-  const sim = performance.now() - t0;
-  debug.simMs += (sim - debug.simMs) * .1;
-  debug.simMax = Math.max(debug.simMax * .995, sim);
-  updateBoard(dt);
-  if (app.view === 'board') renderBoard(); else if (gfx.gl) renderFieldWithGL(); else renderField();
-  frameHud(dt);
-
-  uiT += dt; saveT += dt;
-  if (uiT > UI_INTERVAL) {
-    uiT = 0;
-    recalc();
-    if (S.dl.auto && S.autoBuy) autoBuy();
-    if (S.sl.autoStar && S.autoStar) autoBuyStardust();
-    if (S.tl.dmAuto && S.autoDm) autoBuyDark();
-    setLayout(multiverseOn());
-    sanitizeState();
-    if (S.money >= Number.MAX_VALUE && !capWarned) { capWarned = true; toast('Money hit the number limit (1.8e308). It stays there for now.', '#ff5a6e'); }
-    maybeAutoNova();
-    tickPrestige();
-    checkRiftGoal();
-    tickHud();
-  }
-  if (saveT > SAVE_INTERVAL) { saveT = 0; save(autoRateAvg()); }
-  requestAnimationFrame(frame);
+async function startEra(index: number): Promise<Era> {
+  const e = (await ERAS[index]()).default;
+  document.body.classList.add(e.theme);
+  document.title = e.name;
+  $<HTMLMetaElement>('meta[name="theme-color"]').content = e.chrome;
+  e.mount();
+  // descriptors, not a spread, so the era's debug getters/setters (e.g. space's `paused`) stay live
+  (window as unknown as Record<string, unknown>).__cb = Object.defineProperties({ S, era: e }, Object.getOwnPropertyDescriptors(e.debug ?? {}));
+  return e;
 }
 
-window.addEventListener('beforeunload', () => save(autoRateAvg()));
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { save(autoRateAvg()); return; }
-  // The browser stops the loop in a hidden tab: pay the drones for that time at full rate.
-  const away = (Date.now() - S.saved) / 1000;
-  const g = applyOfflineEarnings(1, 1);
-  if (!g) return;
-  save(autoRateAvg()); // moves S.saved forward so a reload can't pay the same time again
-  refreshAll();
-  if (away > 60) toast(`While you were tabbed out, your drones earned $${fmt(g)}`, '#ffd34d');
-});
+/** The current era is over: play the next one's intro, then switch for good. */
+async function nextEra(): Promise<void> {
+  if (switching || S.era + 1 >= ERAS.length) return;
+  switching = true;
+  save(era.autoRate());
+  const next = (await ERAS[S.era + 1]()).default;
+  await next.intro?.();
+  S.era++;
+  S.saved = Date.now();
+  save(0);
+  // The old era's DOM, listeners and GPU state are simplest to drop with the page itself.
+  location.reload();
+}
 
-// Debug handle for the browser console.
-const debug = { S, recalc, world, worlds, gfx, clearCanvas, renderField, renderFieldWithGL, /** Freeze the loop (for comparing renderers). */ paused: false,
-  /** Simulation time per frame in ms: a moving average and a slowly decaying peak (for profiling). */ simMs: 0, simMax: 0 };
-(window as unknown as Record<string, unknown>).__cb = debug;
+function catchUp(hidden: boolean): void {
+  if (!S.saved) return;
+  const secs = Math.min(CATCH_UP_MAX, (Date.now() - S.saved) / 1000);
+  if (secs <= 0) return;
+  const msg = era.catchUp(secs, hidden);
+  if (msg) setTimeout(() => toast(msg, '#ffd34d'), hidden ? 0 : 400);
+  // moves S.saved forward so the same time can't be paid twice
+  save(era.autoRate());
+}
 
-requestAnimationFrame(frame);
+async function boot(): Promise<void> {
+  load();
+  setNextEraHandler(() => { void nextEra(); });
+  era = await startEra(Math.min(S.era, ERAS.length - 1));
+  catchUp(false);
+
+  let last = performance.now(), uiT = 0, saveT = 0;
+  const frame = (now: number): void => {
+    const dt = Math.min(.05, (now - last) / 1000);
+    last = now;
+    if (!switching) {
+      era.frame(dt);
+      uiT += dt; saveT += dt;
+      if (uiT > UI_INTERVAL) { uiT = 0; era.tick(); }
+      if (saveT > SAVE_INTERVAL) { saveT = 0; save(era.autoRate()); }
+    }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+
+  window.addEventListener('beforeunload', () => { if (!switching) save(era.autoRate()); });
+  document.addEventListener('visibilitychange', () => {
+    if (switching) return;
+    if (document.hidden) save(era.autoRate());
+    // The browser stops the loop in a hidden tab: pay for that time on return.
+    else catchUp(true);
+  });
+}
+
+void boot();

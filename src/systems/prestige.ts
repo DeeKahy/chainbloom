@@ -7,7 +7,8 @@ import { liveThreads, sparkDM, TL } from '../content/multiverse';
 import { GL } from '../content/garden';
 import { LL } from '../content/loom';
 import { eraGain } from '../content/bang';
-import { clearGardenFx, openGarden } from '../sim/garden';
+import { clearGardenFx } from '../sim/garden';
+import { requestNextEra } from '../eras/era';
 import { placeHeirloom, tickLoom } from './loom';
 import type { Chain } from './economy';
 import { riftById, RIFTS } from '../content/rifts';
@@ -291,10 +292,14 @@ export const gardenReady = (): boolean => S.threadsEver >= GARDEN_THREADS && S.h
 export const loomReady = (): boolean => S.gardenOn && S.pollenEver >= LOOM_POLLEN && S.potBest >= LOOM_POT;
 export const bangReady = (): boolean => S.loomOn && S.bestBead >= BANG_BEAD && S.knotsEver >= BANG_KNOTS;
 
+let endingEra = false;
+
 function checkUnlocks(): void {
-  if (!S.gardenOn && gardenReady()) {
-    openGarden();
-    celebrate('125,255,176', 'The Garden opened: two seeds are waiting in the Garden tab. Plant them on the field.', '#7dffb0');
+  // Reaching the Garden ends the space era: the farm takes over (src/eras/farm).
+  if (gardenReady() && !endingEra) {
+    endingEra = true;
+    celebrate('255,230,160', 'The field goes quiet. Something smells of grass and pollen...', '#ffd34d');
+    setTimeout(requestNextEra, 1500);
   }
   if (!S.loomOn && loomReady()) {
     S.loomOn = true;
