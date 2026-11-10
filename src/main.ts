@@ -102,7 +102,16 @@ function frame(now: number): void {
 }
 
 window.addEventListener('beforeunload', () => save(autoRateAvg()));
-document.addEventListener('visibilitychange', () => { if (document.hidden) save(autoRateAvg()); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { save(autoRateAvg()); return; }
+  // The browser stops the loop in a hidden tab: pay the drones for that time at full rate.
+  const away = (Date.now() - S.saved) / 1000;
+  const g = applyOfflineEarnings(1, 1);
+  if (!g) return;
+  save(autoRateAvg()); // moves S.saved forward so a reload can't pay the same time again
+  refreshAll();
+  if (away > 60) toast(`While you were tabbed out, your drones earned $${fmt(g)}`, '#ffd34d');
+});
 
 // Debug handle for the browser console.
 const debug = { S, recalc, world, worlds, gfx, clearCanvas, renderField, renderFieldWithGL, /** Freeze the loop (for comparing renderers). */ paused: false,

@@ -427,12 +427,15 @@ export function importState(next: GameState): void {
   refreshAll();
 }
 
-/** Drones keep earning at half rate while away, for up to 2 hours. Returns the amount. */
-export function applyOfflineEarnings(): number {
+/**
+ * Drones keep earning while away, for up to 2 hours: at half rate when the game was closed,
+ * at `share` of the rate when only the tab was hidden (the loop stops then). Returns the amount.
+ */
+export function applyOfflineEarnings(share = .5, minSecs = 60): number {
   if (!S.saved || stat.drones <= 0 || S.lastRate <= 0) return 0;
   const secs = Math.min(7200, (Date.now() - S.saved) / 1000);
-  if (secs <= 60) return 0;
-  const g = S.lastRate * secs * .5;
+  if (secs <= minSecs) return 0;
+  const g = S.lastRate * secs * share;
   S.money += g; S.runEarned += g; S.total += g;
   return g;
 }
