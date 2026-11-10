@@ -6,7 +6,7 @@ import { S } from '../../state/state';
 import { currencyShop } from '../../ui/shop';
 import { armed, toast } from '../../ui/toast';
 import {
-  APIARY_POLLEN, beesPerHive, CHAIN_FULL, FL, growTime, HARVEST_MIN, harvestGain, HL, HUES, HV, hiveCount, patternOf, potFactor,
+  APIARY_POLLEN, beesPerHive, FL, growTime, HARVEST_MIN, harvestGain, HL, HUES, HV, hiveCount, patternOf, potFactor,
   prosperity, SEASONS_HIVES, SEASONS_HONEY, strainName, type Strain,
 } from './content';
 import { autoRate, bringIn, compost, HARVEST_IDLE, meadow, plotSize } from './meadow';
@@ -67,7 +67,7 @@ const HTML = `
   <div class="fpane" id="fpane-harvest" hidden>
     <div class="fbox fharvestbox">
       <div class="fcount"><span id="fsheafCount">0</span> 🌾 Harvest</div>
-      <p>When the year has been good, bring in the <b>harvest</b>. The bees and the breeze rest while you wait for your flowers to ripen; then tap one to start the <b>harvest chain</b>. Every flower it reaches is brought in: each counts its potency once, however often it blooms. Then <b>winter</b> takes the meadow, Pollen, Honey and their upgrades. Your seeds, Harvest and Harvest upgrades stay.</p>
+      <p>When the year has been good, bring in the <b>harvest</b>. The bees rest while you wait for your flowers to ripen; then tap one to start the <b>harvest chain</b>. Every flower it reaches is brought in: each counts its potency once, however often it blooms. Then <b>winter</b> takes the meadow, Pollen, Honey and their upgrades. Your seeds, Harvest and Harvest upgrades stay.</p>
       <div id="fharvestInfo" class="finfo"></div>
       <button class="fbig" id="fharvestBtn">Begin the harvest</button>
       <button class="fbig falt" id="fbringBtn" hidden>Bring it in now</button>
@@ -81,11 +81,11 @@ const HTML = `
     <div class="fhelp">
       <b>Patterns:</b> a Daisy ✚ sends pollen to the four tiles beside it, a Poppy ✕ to the diagonals, a Tulip ↔ two tiles left and right, a Foxglove ↕ two up and down, an Aster ✺ all around. Rarer ones only come from mutations.<br>
       <b>Potency</b> (the dots under a flower) multiplies its Pollen, but it grows slower.<br>
-      <b>Pollen that lands on an unripe flower</b> helps it grow, so a clever meadow can keep a chain going forever. The first ${CHAIN_FULL} blooms of a chain pay in full; after that each bloom pays less.<br>
+      <b>Pollen that lands on an unripe flower</b> helps it grow. Each flower blooms at most once per chain, so every chain ends.<br>
       Hover a flower to see where its pollen goes. Hold and drag to plant a row.<br>
       <b>Bees</b> (Apiary) fly to the nearest ripe flower; with Waggle Dance each hive keeps to its favourite colour.<br>
       <b>Harvest</b> (Seasons): crops × prosperity, where prosperity grows with the Pollen earned this year (it starts paying at ${fmt(HARVEST_MIN)}).<br>
-      Flowers keep growing while you're away, and the Breeze and the bees keep working (at half rate), up to 2 hours.
+      Flowers keep growing while you're away, and the bees keep working (at half rate), up to 2 hours.
     </div>
     <div class="fsave">
       <div class="row"><button id="fexport">Export save</button><button id="fimport">Import save</button></div>
@@ -241,9 +241,9 @@ export function tickUi(): void {
   const hud = $('#fhoney');
   hud.hidden = !f.apiaryOn;
   if (f.apiaryOn) setText(hud, fmt(f.honey) + ' ⬢ honey');
-  const auto = f.lv.breeze || f.apiaryOn;
+  const auto = f.apiaryOn;
   setText($('#frate'), !auto ? 'tap a glowing flower'
-    : `${f.apiaryOn ? 'the bees' : 'the breeze'} bring ${fmt(autoRate())} ✿ / sec` + (f.apiaryOn ? ` · ${fmt(f.honeyRate)} ⬢ / sec` : ''));
+    : `the bees bring ${fmt(autoRate())} ✿ / sec · ${fmt(f.honeyRate)} ⬢ / sec`);
   refreshHarvestHud();
   setText($('#fpollenCount'), fmt(f.pollen));
   if (ui.tab === 'meadow') {

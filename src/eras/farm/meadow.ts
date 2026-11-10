@@ -1,6 +1,6 @@
 import { S } from '../../state/state';
 import {
-  bloomValue, breezeEvery, chainFalloff, genome, growTime, HUES, hybridChance, jellyMult, mutationChance, PATTERNS, patternOf, soilMult,
+  bloomValue, genome, growTime, HUES, hybridChance, jellyMult, mutationChance, PATTERNS, patternOf, soilMult,
   PLOT_BASE, PLOT_MAX, POLLEN_BOOST, POLLEN_SPEED, potMax, type Strain,
 } from './content';
 
@@ -13,7 +13,7 @@ export interface Chain {
   /** Blooms so far, and Pollen paid. */
   count: number;
   pay: number;
-  /** Started by the Breeze rather than a tap (counts toward the offline rate). */
+  /** Started by a bee rather than a tap (counts toward the offline rate). */
   auto: boolean;
   /** Pollen grains of this chain still in the air. */
   live: number;
@@ -30,6 +30,8 @@ export interface Chain {
   closed: boolean;
   /** Grains of this chain in the air, by target tile (for merging). */
   inbound: Map<number, Grain>;
+  /** Tiles that already bloomed in this chain: each flower blooms at most once per chain, so chains end. */
+  done: Set<number>;
 }
 
 export interface Grain {
@@ -52,7 +54,6 @@ export const GRAIN_MERGE = 200;
 
 export const meadow = {
   grains: [] as Grain[],
-  breezeT: 0,
   /** Layer 3: 'armed' = the next tap starts the harvest chain; 'running' = it is under way. */
   harvest: 'off' as 'off' | 'armed' | 'running',
   harvestChain: null as Chain | null,
@@ -72,7 +73,7 @@ export function bringIn(c: Chain | null = meadow.harvestChain): void {
   fx.harvestEnd?.(c);
 }
 
-/** While a harvest is being set up or brought in, the bees and the breeze rest. */
+/** While a harvest is being set up or brought in, the bees rest. */
 export const automationRests = (): boolean => meadow.harvest !== 'off';
 
 /** Pollen multiplier from the layers above the Meadow. */
@@ -86,7 +87,6 @@ export const fx: {
   reap?: (tile: number) => void;
   harvestEnd?: (c: Chain) => void;
   honey?: (hive: number, amount: number) => void;
-  breeze?: (tile: number) => void;
   grow?: (tile: number) => void;
 } = {};
 
@@ -165,13 +165,12 @@ export function targetsOf(i: number, s: Strain): number[] {
 
 function bloom(i: number, chain: Chain, depth: number, kindred: boolean): void {
   const f = F(), p = f.plot[i];
-  if (!p || p.g < 1) return;
+  if (!p || p.g < 1 || chain.done.has(i)) return;
   const s = strainById(p.s);
   if (!s) return;
+  chain.done.add(i);
   p.g = 0;
-  // Chains may loop forever (pollen regrows flowers they already bloomed); past CHAIN_FULL blooms
-  // each one pays less, so an endless chain is a clever find, not the whole game.
-  const v = bloomValue(s, depth, kindred, f.lv.nectar, f.lv.scent, pollenMult()) * chainFalloff(chain.count);
+  const v = bloomValue(s, depth, kindred, f.lv.nectar, f.lv.scent, pollenMult());
   f.pollen = Math.min(f.pollen + v, Number.MAX_VALUE);
   f.pollenEver = Math.min(f.pollenEver + v, Number.MAX_VALUE);
   f.yearPollen = Math.min(f.yearPollen + v, Number.MAX_VALUE);
@@ -196,12 +195,12 @@ function bloom(i: number, chain: Chain, depth: number, kindred: boolean): void {
   }
 }
 
-/** A tap on a ripe flower (or a bee or the breeze). Returns false if it wasn't ripe. */
+/** A tap on a ripe flower (or a bee). Returns false if it wasn't ripe. */
 export function bloomTap(i: number, auto = false): boolean {
   if (!isRipe(i)) return false;
   const harvest = !auto && meadow.harvest === 'armed';
   if (harvest) meadow.harvest = 'running';
-  const chain: Chain = { count: 0, pay: 0, auto, live: 0, origin: i, harvest, crops: 0, reaped: new Set(), idle: 0, closed: false, inbound: new Map() };
+  const chain: Chain = { count: 0, pay: 0, auto, live: 0, origin: i, harvest, crops: 0, reaped: new Set(), idle: 0, closed: false, inbound: new Map(), done: new Set() };
   if (harvest) meadow.harvestChain = chain;
   bloom(i, chain, 0, false);
   if (!chain.live) endChain(chain);
@@ -221,10 +220,11 @@ function land(g: Grain): void {
   if (g.chain.inbound.get(g.to) === g) g.chain.inbound.delete(g.to);
   if (p) {
     const target = strainById(p.s), from = strainById(g.strain);
-    if (p.g >= 1 && target) {
+    if (p.g >= 1 && target && !g.chain.done.has(g.to)) {
       if (from && from.id !== target.id && Math.random() < hybridChance(f.lv.wild)) discover(breed(from, target), g.to);
       bloom(g.to, g.chain, g.depth + 1, !!from && from.hue === target.hue);
-    } else if (p.g < 1) {
+    } else if (p.g < 1 && !g.chain.done.has(g.to)) {
+      // a flower this chain already bloomed doesn't regrow from it: chains always end
       p.g = Math.min(1, p.g + POLLEN_BOOST * g.w);
       fx.grow?.(g.to);
     }
@@ -273,7 +273,7 @@ export function compost(id: number): boolean {
 
 // ---------- time ----------
 
-/** Rolling one-minute average of Pollen/sec from Breeze chains (the Breeze is slow, so 5 s is too short). */
+/** Rolling one-minute average of Pollen/sec from chains the bees start (trips are slow, so 5 s is too short). */
 const rate = { bucket: 0, t: 0, hist: [] as number[], avg: 0 };
 export const autoRate = (): number => rate.avg;
 /** Start the average from the rate stored with the save, so a save right after loading keeps it. */
@@ -305,19 +305,6 @@ export function update(dt: number): void {
     land(g);
   }
 
-  if (f.lv.breeze > 0 && !automationRests()) {
-    meadow.breezeT += dt;
-    if (meadow.breezeT >= breezeEvery(f.lv.breeze)) {
-      meadow.breezeT = 0;
-      const ripe = activeTiles().filter(isRipe);
-      if (ripe.length) {
-        const t = ripe[Math.random() * ripe.length | 0];
-        fx.breeze?.(t);
-        bloomTap(t, true);
-      }
-    }
-  }
-
   rate.t += dt;
   if (rate.t >= 1) {
     rate.t -= 1;
@@ -328,10 +315,10 @@ export function update(dt: number): void {
   }
 }
 
-/** Time the game did not run: flowers grow, and the Breeze earns at its measured rate × share. */
+/** Time the game did not run: flowers grow, and the bees' chains earn at their measured rate × share. */
 export function offline(secs: number, share: number): number {
   for (const i of activeTiles()) grow(i, secs);
-  if ((!F().lv.breeze && !F().apiaryOn) || S.lastRate <= 0) return 0;
+  if (!F().apiaryOn || S.lastRate <= 0) return 0;
   const g = S.lastRate * secs * share;
   F().pollen = Math.min(F().pollen + g, Number.MAX_VALUE);
   F().pollenEver = Math.min(F().pollenEver + g, Number.MAX_VALUE);

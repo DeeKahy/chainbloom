@@ -24,7 +24,7 @@ export function checkUnlocks(): 'apiary' | 'seasons' | null {
 
 export const canHarvest = (): boolean => F().seasonsOn && F().yearPollen >= HARVEST_MIN;
 
-/** Arm the harvest: the bees and the breeze rest, and the next tap on a ripe flower starts it. */
+/** Arm the harvest: the bees rest, and the next tap on a ripe flower starts it. */
 export function beginHarvest(): boolean {
   if (!canHarvest() || meadow.harvest !== 'off') return false;
   meadow.harvest = 'armed';
@@ -57,7 +57,7 @@ export function winter(): void {
   const f = F(), hv = f.hv, keepGenes = hv.memory > 0;
   const lv = Object.fromEntries(FL.map(u => [u.id, 0]));
   lv.plot = Math.min(PLOT_MAX - 5, hv.clearing);
-  lv.breeze = Math.min(10, 2 * hv.scarecrow);
+  lv.sun = Math.min(15, 2 * hv.scarecrow);
   if (keepGenes) { lv.wild = f.lv.wild; lv.vigour = f.lv.vigour; }
   f.lv = lv;
   const hl = Object.fromEntries(HL.map(u => [u.id, 0]));
@@ -73,6 +73,5 @@ export function winter(): void {
   meadow.grains = [];
   meadow.harvest = 'off';
   meadow.harvestChain = null;
-  meadow.breezeT = 0;
   clearBees();
 }

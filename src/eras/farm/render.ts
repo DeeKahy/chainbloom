@@ -66,9 +66,8 @@ export function tileFromPoint(px: number, py: number): number {
 interface Petal { x: number; y: number; vx: number; vy: number; r: number; spin: number; life: number; max: number; col: string; size: number }
 interface Ring { x: number; y: number; t: number; col: string; size: number }
 interface Float { x: number; y: number; t: number; text: string; col: string }
-interface Gust { y: number; t: number; amp: number }
 
-const petals: Petal[] = [], rings: Ring[] = [], floats: Float[] = [], gusts: Gust[] = [];
+const petals: Petal[] = [], rings: Ring[] = [], floats: Float[] = [];
 /** Seconds since each tile last bloomed (for the squash animation). */
 const bloomedAt = new Map<number, number>();
 let T = 0;
@@ -90,11 +89,6 @@ export function bloomFx(i: number, pay: number, s: Strain, text: string): void {
 export function floatText(i: number, text: string, col: string): void {
   const [x, y] = tileCenter(i);
   floats.push({ x, y: y - view.tile * .5, t: 0, text, col });
-}
-
-export function gustFx(i: number): void {
-  const [, y] = tileCenter(i);
-  for (let k = 0; k < 4; k++) gusts.push({ y: y + (k - 1.5) * view.tile * .5, t: -k * .08, amp: 6 + Math.random() * 10 });
 }
 
 // ---------- drawing ----------
@@ -386,22 +380,6 @@ export function render(dt: number): void {
     ellipse(p.x, p.y, p.size, p.size * .5, p.r);
   }
   ctx.globalAlpha = 1;
-
-  for (let k = gusts.length - 1; k >= 0; k--) {
-    const g = gusts[k];
-    g.t += dt;
-    if (g.t > 1.2) { gusts.splice(k, 1); continue; }
-    if (g.t < 0) continue;
-    const u = g.t / 1.2, x = -60 + (view.w + 120) * u;
-    ctx.strokeStyle = `rgba(255,255,255,${.5 * Math.sin(u * Math.PI)})`;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    for (let j = 0; j <= 10; j++) {
-      const px = x - j * 12, py = g.y + Math.sin(j * .7 + T * 4) * g.amp * .3;
-      if (j) ctx.lineTo(px, py); else ctx.moveTo(px, py);
-    }
-    ctx.stroke();
-  }
 
   ctx.textAlign = 'center';
   ctx.font = `800 ${Math.max(12, Math.min(18, view.tile * .3))}px ui-sans-serif,system-ui,sans-serif`;

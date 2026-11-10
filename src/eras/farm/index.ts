@@ -9,7 +9,7 @@ import { $, fmt } from '../../core/util';
 import { S } from '../../state/state';
 import { HUES } from './content';
 import { autoRate, bloomTap, fx, isRipe, meadow, offline, plant, seedRate, uproot, update } from './meadow';
-import { initRender, layoutPlot, render, resize, tileCenter, tileFromPoint, bloomFx, floatText, gustFx, honeyFx, view } from './render';
+import { initRender, layoutPlot, render, resize, tileCenter, tileFromPoint, bloomFx, floatText, honeyFx, view } from './render';
 import { banner, buildUi, frameUi, hybridToast, refreshSeeds, tickUi, ui, winterScene } from './ui';
 import { apiary, apiaryOffline, seedHoneyRate, updateApiary } from './apiary';
 import { checkUnlocks, finishHarvest } from './seasons';
@@ -99,7 +99,6 @@ const farm: Era = {
     };
     fx.chainEnd = c => { if (c.count >= 6) banner(c.count); };
     fx.hybrid = (s, i) => { hybridToast(s); floatText(i, 'new seed!', HUES[s.hue].col); refreshSeeds(); };
-    fx.breeze = i => gustFx(i);
     fx.honey = (hive, amount) => honeyFx(hive, '+' + fmt(amount) + ' ⬢');
     fx.reap = i => floatText(i, '🌾', '#c88a12');
     fx.harvestEnd = c => {
@@ -139,7 +138,7 @@ const farm: Era = {
     const share = hidden ? 1 : .5;
     const g = offline(secs, share), h = apiaryOffline(secs, share);
     if ((!g && !h) || secs <= 60) return null;
-    return `While you were ${hidden ? 'tabbed out' : 'away'}, ${S.farm.apiaryOn ? 'the bees' : 'the breeze'} brought ${fmt(g)} ✿` + (h ? ` and ${fmt(h)} ⬢` : '');
+    return `While you were ${hidden ? 'tabbed out' : 'away'}, the bees brought ${fmt(g)} ✿` + (h ? ` and ${fmt(h)} ⬢` : '');
   },
 
   intro: playIntro,

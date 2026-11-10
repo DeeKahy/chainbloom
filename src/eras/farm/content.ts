@@ -91,11 +91,6 @@ export const growTime = (s: Strain, sun: number, spring = 0): number => GROW_BAS
 export const bloomValue = (s: Strain, d: number, kindred: boolean, nectar: number, scent: number, mult = 1): number =>
   potFactor(s.pot) * 1.35 ** nectar * depthMult(d, scent) * (kindred ? 2 : 1) * mult;
 
-/** Blooms in one chain that pay in full. */
-export const CHAIN_FULL = 50;
-/** Pay factor for the next bloom of a chain that already has `count` blooms: 1, then CHAIN_FULL / count. */
-export const chainFalloff = (count: number): number => count < CHAIN_FULL ? 1 : CHAIN_FULL / (count + 1);
-
 /** Chain depth where the bonus stops compounding and turns logarithmic. */
 export const DEPTH_SOFT = 8;
 
@@ -113,7 +108,6 @@ export const scentStep = (l: number): number => .12 + .03 * l;
 export const hybridChance = (l: number): number => .1 + .05 * l;
 export const mutationChance = (l: number): number => .25 + .05 * l;
 export const potMax = (l: number): number => 3 + l;
-export const breezeEvery = (l: number): number => 15 * .85 ** (l - 1);
 
 export const FL: UpgradeDef[] = [
   { id: 'plot', name: 'Clear Land', base: 400, g: 6, max: PLOT_MAX - PLOT_BASE,
@@ -124,9 +118,6 @@ export const FL: UpgradeDef[] = [
     desc: (l, t) => `Pollen per bloom ×${fmt(1.35 ** l)} → ×${fmt(1.35 ** t)}` },
   { id: 'scent', name: 'Sweet Scent', base: 300, g: 2.6, max: 10,
     desc: (l, t) => `Each of the first ${DEPTH_SOFT} blooms deeper in a chain pays +${Math.round(scentStep(l) * 100)}% → +${Math.round(scentStep(t) * 100)}% more (slower after that)` },
-  { id: 'breeze', name: 'Breeze', base: 150, g: 2.4, max: 10,
-    desc: (l, t) => l ? `A breeze blooms a ripe flower every ${fmt(breezeEvery(l))}s → ${fmt(breezeEvery(t))}s, even while you're away`
-      : `A breeze blooms a ripe flower every ${fmt(breezeEvery(t))}s, even while you're away` },
   { id: 'wild', name: 'Wild Pollen', base: 150, g: 2.4, max: 6,
     desc: (l, t) => `Hybrid seed chance ${Math.round(hybridChance(l) * 100)}% → ${Math.round(hybridChance(t) * 100)}%, mutation ${Math.round(mutationChance(l) * 100)}% → ${Math.round(mutationChance(t) * 100)}%` },
   { id: 'vigour', name: 'Hybrid Vigour', base: 1500, g: 4, max: 5,
@@ -175,7 +166,7 @@ export const HL: UpgradeDef[] = [
 
 // ---------- layer 3: the Seasons → Harvest 🌾 ----------
 /*
- * A played prestige. Begin the harvest: the bees and the breeze rest, and the next ripe flower you
+ * A played prestige. Begin the harvest: the bees rest, and the next ripe flower you
  * tap starts the harvest chain. Every flower it blooms is brought in (crops = the sum of their
  * potencies). Then winter clears the meadow, Pollen, Honey and their upgrades; strains, Harvest
  * and its upgrades stay. Gain = crops × prosperity, where prosperity grows with the log of the
@@ -203,8 +194,8 @@ export const HV: UpgradeDef[] = [
     desc: (l, t) => `Harvest ×${fmt(1.25 ** l)} → ×${fmt(1.25 ** t)}` },
   { id: 'clearing', name: 'Early Clearing', base: 4, g: 2.8, max: PLOT_MAX - PLOT_BASE,
     desc: (l, t) => `Each spring the meadow starts at ${PLOT_BASE + l}×${PLOT_BASE + l} → ${PLOT_BASE + t}×${PLOT_BASE + t}` },
-  { id: 'scarecrow', name: 'Scarecrow', base: 3, g: 2.3, max: 5,
-    desc: (l, t) => `Each spring Breeze starts at level ${2 * l} → ${2 * t}` },
+  { id: 'scarecrow', name: 'Old Sundial', base: 3, g: 2.3, max: 5,
+    desc: (l, t) => `Each spring Sunlight starts at level ${2 * l} → ${2 * t}` },
   { id: 'oldhives', name: 'Old Hives', base: 5, g: 2.8, max: 4,
     desc: (l, t) => `Each spring keeps ${l} → ${t} Another Hive level${t === 1 ? '' : 's'} and as many Bigger Colony levels (up to its max)` },
   { id: 'memory', name: 'Seed Memory', base: 10, g: 1, max: 1,

@@ -64,6 +64,12 @@ export function normalizeFarm(raw: unknown): FarmState {
   const d = raw as Partial<FarmState>;
   const out: FarmState = Object.assign(f, d);
   out.lv = Object.assign(freshFarm().lv, d.lv);
+  // The Breeze is gone (2026-11-10): give back the Pollen its levels cost, at its last prices.
+  const breeze = out.lv.breeze;
+  if (breeze > 0) {
+    for (let l = 0; l < breeze; l++) out.pollen += Math.ceil(150 * 2.4 ** l);
+  }
+  delete out.lv.breeze;
   out.hl = Object.assign(freshFarm().hl, d.hl);
   out.hv = Object.assign(freshFarm().hv, d.hv);
   if (!Array.isArray(out.hivePref) || out.hivePref.length !== HIVE_MAX) out.hivePref = freshFarm().hivePref;
