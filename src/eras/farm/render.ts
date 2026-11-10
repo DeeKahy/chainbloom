@@ -2,6 +2,7 @@ import { TAU } from '../../core/util';
 import { S } from '../../state/state';
 import { HUES, PLOT_MAX, type Strain } from './content';
 import { activeTiles, inPlot, meadow, strainById, targetsOf, tileXY } from './meadow';
+import { apiary, hivePos, hivesNow } from './apiary';
 
 /**
  * Canvas 2D drawing of the meadow. A few dozen flowers and a few hundred particles at most, so
@@ -37,8 +38,10 @@ export function resize(): void {
 
 export function layoutPlot(): void {
   const n = activeTiles().length ** .5;
-  const top = view.h < 500 ? 70 : 96, pad = 14;
-  const tile = Math.max(18, Math.min((view.w - pad * 2) / n, (view.h - top - pad) / n, 92));
+  // room on the grass around the soil for the hives once the Apiary is open
+  const fit = n + (S.farm.apiaryOn ? 1.7 : 0);
+  const top = (view.h < 500 ? 70 : 96) + (S.farm.apiaryOn ? 12 : 0), pad = 14;
+  const tile = Math.max(18, Math.min((view.w - pad * 2) / fit, (view.h - top - pad) / fit, 92));
   const ox = (view.w - tile * n) / 2, oy = top + (view.h - top - pad - tile * n) / 2;
   const off = (PLOT_MAX - n) / 2;
   view.tile = tile;
@@ -264,6 +267,53 @@ function drawPlant(i: number, ripeGlow: number): void {
   }
 }
 
+const gx = (x: number): number => view.x0 + x * view.tile;
+const gy = (y: number): number => view.y0 + y * view.tile;
+
+/** A straw skep: stacked rings, a dark door, and a little flag in its favourite colour. */
+function drawHive(k: number): void {
+  const [hx, hy] = hivePos(k), x = gx(hx), y = gy(hy), r = view.tile * .34;
+  ctx.fillStyle = 'rgba(90,60,20,.18)';
+  ellipse(x, y + r * .95, r * 1.1, r * .3, 0);
+  for (let i = 0; i < 4; i++) {
+    const w = r * (1.05 - i * .2), yy = y + r * .6 - i * r * .42;
+    ctx.fillStyle = i % 2 ? '#d9a441' : '#e6b65a';
+    ellipse(x, yy, w, r * .3, 0);
+  }
+  ctx.fillStyle = '#c48a2c';
+  ellipse(x, y - r * .95, r * .22, r * .16, 0);
+  ctx.fillStyle = '#5a3a14';
+  ellipse(x, y + r * .55, r * .2, r * .17, 0);
+  const pref = S.farm.hl.waggle ? S.farm.hivePref[k] : -1;
+  if (pref >= 0) {
+    ctx.strokeStyle = '#6b4a1e'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x + r * .7, y - r * .2); ctx.lineTo(x + r * .7, y - r * 1.3); ctx.stroke();
+    ctx.fillStyle = HUES[pref].col;
+    ctx.beginPath(); ctx.moveTo(x + r * .7, y - r * 1.3); ctx.lineTo(x + r * 1.25, y - r * 1.12); ctx.lineTo(x + r * .7, y - r * .94); ctx.fill();
+  }
+}
+
+function drawBee(bx: number, by: number, ph: number, loaded: boolean, resting: boolean): void {
+  if (resting) return;
+  const x = gx(bx) + Math.sin(ph * .7) * view.tile * .05, y = gy(by) + Math.cos(ph) * view.tile * .05;
+  const r = Math.max(3, view.tile * .07);
+  ctx.fillStyle = 'rgba(255,255,255,.75)';
+  const flap = Math.abs(Math.sin(ph * 3));
+  ellipse(x - r * .3, y - r * .9, r * .55, r * (.3 + .4 * flap), -.5);
+  ellipse(x + r * .3, y - r * .9, r * .55, r * (.3 + .4 * flap), .5);
+  ctx.fillStyle = '#f2b81c';
+  ellipse(x, y, r * 1.1, r * .8, 0);
+  ctx.fillStyle = '#3a2a12';
+  ellipse(x - r * .2, y, r * .18, r * .75, 0);
+  ellipse(x + r * .35, y, r * .18, r * .65, 0);
+  if (loaded) { ctx.fillStyle = '#ffd25a'; ellipse(x, y + r * .9, r * .45, r * .45, 0); }
+}
+
+export function honeyFx(hive: number, amount: string): void {
+  const [hx, hy] = hivePos(hive);
+  if (floats.length < 40) floats.push({ x: gx(hx), y: gy(hy) - view.tile * .4, t: 0, text: amount, col: '#c88a12' });
+}
+
 export function render(dt: number): void {
   T += dt;
   ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
@@ -285,7 +335,22 @@ export function render(dt: number): void {
     }
   }
 
+  if (meadow.harvest !== 'off') {
+    // harvest light: the soil turns gold, and tiles already brought in get a sheaf mark
+    const t = view.tile, reaped = meadow.harvestChain?.reaped;
+    ctx.fillStyle = 'rgba(255,200,80,.16)';
+    for (const i of tiles) { const [x, y] = tileCenter(i); roundRect(ctx, x - t / 2 + 2, y - t / 2 + 2, t - 4, t - 4, t * .16); ctx.fill(); }
+    if (reaped) {
+      ctx.strokeStyle = 'rgba(214,150,30,.9)';
+      ctx.lineWidth = 2.5;
+      for (const i of reaped) { const [x, y] = tileCenter(i); roundRect(ctx, x - t / 2 + 3, y - t / 2 + 3, t - 6, t - 6, t * .16); ctx.stroke(); }
+    }
+  }
+
   for (const i of tiles) drawPlant(i, 1);
+
+  for (let k = 0; k < hivesNow(); k++) drawHive(k);
+  for (const b of apiary.bees) drawBee(b.x, b.y, b.ph, b.load > 0, b.state === 'rest');
 
   // pollen in the air: a glowing grain on a low arc, with a short trail
   for (const g of meadow.grains) {

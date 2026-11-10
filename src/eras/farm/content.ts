@@ -84,11 +84,17 @@ export const POLLEN_BOOST = .2;
 export const POLLEN_SPEED = .16;
 
 export const potFactor = (pot: number): number => pot ** 1.5;
-export const growTime = (s: Strain, sun: number): number => GROW_BASE * (1 + .3 * (s.pot - 1)) * patternOf(s.p).slow * .88 ** sun;
+export const growTime = (s: Strain, sun: number, spring = 0): number => GROW_BASE * (1 + .3 * (s.pot - 1)) * patternOf(s.p).slow * .88 ** sun / 1.25 ** spring;
 
 /** Pollen for one bloom at chain depth d. */
-export const bloomValue = (s: Strain, d: number, kindred: boolean, nectar: number, scent: number): number =>
-  potFactor(s.pot) * 1.35 ** nectar * depthMult(d, scent) * (kindred ? 2 : 1);
+/** `mult` is everything from higher layers (Royal Jelly, Rich Soil). */
+export const bloomValue = (s: Strain, d: number, kindred: boolean, nectar: number, scent: number, mult = 1): number =>
+  potFactor(s.pot) * 1.35 ** nectar * depthMult(d, scent) * (kindred ? 2 : 1) * mult;
+
+/** Blooms in one chain that pay in full. */
+export const CHAIN_FULL = 50;
+/** Pay factor for the next bloom of a chain that already has `count` blooms: 1, then CHAIN_FULL / count. */
+export const chainFalloff = (count: number): number => count < CHAIN_FULL ? 1 : CHAIN_FULL / (count + 1);
 
 /** Chain depth where the bonus stops compounding and turns logarithmic. */
 export const DEPTH_SOFT = 8;
@@ -125,4 +131,82 @@ export const FL: UpgradeDef[] = [
     desc: (l, t) => `Hybrid seed chance ${Math.round(hybridChance(l) * 100)}% → ${Math.round(hybridChance(t) * 100)}%, mutation ${Math.round(mutationChance(l) * 100)}% → ${Math.round(mutationChance(t) * 100)}%` },
   { id: 'vigour', name: 'Hybrid Vigour', base: 100, g: 3.2, max: 5,
     desc: (l, t) => `Highest potency a hybrid can reach: ${potMax(l)} → ${potMax(t)}` },
+];
+
+// ---------- layer 2: the Apiary → Honey ⬢ ----------
+/*
+ * Hives stand on the grass around the meadow. Their bees fly to the nearest ripe flower, bloom it
+ * (a chain like a tap, counted as automation), sip, and fly home with Honey: the flower's potency
+ * × Big Loads. Waggle Dance lets each hive pick a favourite colour, so you steer where they go.
+ */
+
+/** The Apiary opens when the meadow is 7×7 and this much Pollen has been earned in all. */
+export const APIARY_PLOT = 2;
+export const APIARY_POLLEN = 5000;
+/** Hive slots: four corners first, then the middle of each side. */
+export const HIVE_MAX = 8;
+/** Tiles a bee flies per second, before Swift Wings. */
+export const BEE_SPEED = 1.6;
+/** Seconds a bee sips on a flower, and rests at home between trips. */
+export const BEE_SIP = .7;
+export const BEE_REST = 1.2;
+
+export const beeSpeed = (l: number): number => BEE_SPEED * 1.15 ** l;
+export const beeLoad = (pot: number, l: number): number => pot * 1.4 ** l;
+export const hiveCount = (l: number): number => 1 + l;
+export const beesPerHive = (l: number): number => 1 + l;
+/** Pollen multiplier from Royal Jelly. */
+export const jellyMult = (l: number): number => 1.5 ** l;
+
+export const HL: UpgradeDef[] = [
+  { id: 'hives', name: 'Another Hive', base: 10, g: 3, max: HIVE_MAX - 1,
+    desc: (l, t) => `Hives on the hedge: ${hiveCount(l)} → ${hiveCount(t)}` },
+  { id: 'bees', name: 'Bigger Colony', base: 6, g: 2.6, max: 3,
+    desc: (l, t) => `Bees in every hive: ${beesPerHive(l)} → ${beesPerHive(t)}` },
+  { id: 'swift', name: 'Swift Wings', base: 8, g: 1.9, max: 10,
+    desc: (l, t) => `Bees fly ${fmt(beeSpeed(l))} → ${fmt(beeSpeed(t))} tiles a second` },
+  { id: 'loads', name: 'Big Loads', base: 12, g: 2, max: 15,
+    desc: (l, t) => `Honey per trip ×${fmt(1.4 ** l)} → ×${fmt(1.4 ** t)} (times the flower's potency)` },
+  { id: 'jelly', name: 'Royal Jelly', base: 20, g: 2.2, max: 10,
+    desc: (l, t) => `Pollen from every bloom ×${fmt(jellyMult(l))} → ×${fmt(jellyMult(t))}` },
+  { id: 'waggle', name: 'Waggle Dance', base: 30, g: 1, max: 1,
+    desc: () => 'Give each hive a favourite colour: its bees only visit flowers of that colour.' },
+];
+
+// ---------- layer 3: the Seasons → Harvest 🌾 ----------
+/*
+ * A played prestige. Begin the harvest: the bees and the breeze rest, and the next ripe flower you
+ * tap starts the harvest chain. Every flower it blooms is brought in (crops = the sum of their
+ * potencies). Then winter clears the meadow, Pollen, Honey and their upgrades; strains, Harvest
+ * and its upgrades stay. Gain = crops × prosperity, where prosperity grows with the log of the
+ * Pollen earned this year.
+ */
+
+export const SEASONS_HONEY = 500;
+/** Hives needed (the Another Hive level) to open the Seasons. */
+export const SEASONS_HIVES = 2;
+/** Pollen needed this year before a harvest pays anything. */
+export const HARVEST_MIN = 1e5;
+
+export const prosperity = (yearPollen: number): number => Math.max(0, Math.log10(Math.max(1, yearPollen)) - 4);
+export const harvestGain = (crops: number, yearPollen: number, sickle: number): number =>
+  Math.floor(crops * prosperity(yearPollen) / 8 * 1.25 ** sickle);
+export const soilMult = (l: number): number => 2 ** l;
+export const springGrowth = (l: number): number => 1.25 ** l;
+
+export const HV: UpgradeDef[] = [
+  { id: 'soil', name: 'Rich Soil', base: 1, g: 1.8, max: 12,
+    desc: (l, t) => `Pollen from every bloom ×${fmt(soilMult(l))} → ×${fmt(soilMult(t))}` },
+  { id: 'spring', name: 'Warm Spring', base: 1, g: 1.7, max: 8,
+    desc: (l, t) => `Flowers grow ×${fmt(springGrowth(l))} → ×${fmt(springGrowth(t))} as fast` },
+  { id: 'sickle', name: 'Golden Sickle', base: 2, g: 2, max: 10,
+    desc: (l, t) => `Harvest ×${fmt(1.25 ** l)} → ×${fmt(1.25 ** t)}` },
+  { id: 'clearing', name: 'Early Clearing', base: 2, g: 2.5, max: PLOT_MAX - PLOT_BASE,
+    desc: (l, t) => `Each spring the meadow starts at ${PLOT_BASE + l}×${PLOT_BASE + l} → ${PLOT_BASE + t}×${PLOT_BASE + t}` },
+  { id: 'scarecrow', name: 'Scarecrow', base: 2, g: 2, max: 5,
+    desc: (l, t) => `Each spring Breeze starts at level ${2 * l} → ${2 * t}` },
+  { id: 'oldhives', name: 'Old Hives', base: 3, g: 2.5, max: 4,
+    desc: (l, t) => `Each spring keeps ${l} → ${t} Another Hive level${t === 1 ? '' : 's'} and as many Bigger Colony levels (up to its max)` },
+  { id: 'memory', name: 'Seed Memory', base: 5, g: 1, max: 1,
+    desc: () => 'Wild Pollen, Hybrid Vigour and Waggle Dance survive the winter.' },
 ];

@@ -1,4 +1,4 @@
-import { FL, PLOT_MAX, STARTER_STRAINS, type Strain } from './content';
+import { FL, HIVE_MAX, HL, HV, PLOT_MAX, STARTER_STRAINS, type Strain } from './content';
 
 /** A flower on the plot: which strain, and how grown it is (1 = ripe). */
 export interface Plant { s: number; g: number }
@@ -24,6 +24,25 @@ export interface FarmState {
   /** Date.now() when you became a farmer. */
   since: number;
   playTime: number;
+  // layer 2: the Apiary
+  apiaryOn: boolean;
+  honey: number;
+  honeyEver: number;
+  hl: Record<string, number>;
+  /** Favourite colour of each hive slot (-1 = any), used once Waggle Dance is owned. */
+  hivePref: number[];
+  /** One-minute average Honey/sec, stored for time away. */
+  honeyRate: number;
+  // layer 3: the Seasons
+  seasonsOn: boolean;
+  /** Harvest 🌾 held, and ever. */
+  sheaves: number;
+  sheavesEver: number;
+  hv: Record<string, number>;
+  harvests: number;
+  /** Pollen earned since the last harvest (sets prosperity). */
+  yearPollen: number;
+  bestHarvest: number;
 }
 
 export function freshFarm(): FarmState {
@@ -33,6 +52,8 @@ export function freshFarm(): FarmState {
     strains, next: strains.length + 1, sel: 1,
     plot: new Array(PLOT_MAX * PLOT_MAX).fill(null),
     blooms: 0, bestChain: 0, bestPay: 0, hybrids: 0, potBest: 1, since: 0, playTime: 0,
+    apiaryOn: false, honey: 0, honeyEver: 0, hl: Object.fromEntries(HL.map(u => [u.id, 0])), hivePref: new Array(HIVE_MAX).fill(-1), honeyRate: 0,
+    seasonsOn: false, sheaves: 0, sheavesEver: 0, hv: Object.fromEntries(HV.map(u => [u.id, 0])), harvests: 0, yearPollen: 0, bestHarvest: 0,
   };
 }
 
@@ -43,6 +64,11 @@ export function normalizeFarm(raw: unknown): FarmState {
   const d = raw as Partial<FarmState>;
   const out: FarmState = Object.assign(f, d);
   out.lv = Object.assign(freshFarm().lv, d.lv);
+  out.hl = Object.assign(freshFarm().hl, d.hl);
+  out.hv = Object.assign(freshFarm().hv, d.hv);
+  if (!Array.isArray(out.hivePref) || out.hivePref.length !== HIVE_MAX) out.hivePref = freshFarm().hivePref;
+  // farms from before the Seasons: their first year started when they did
+  if (typeof d.yearPollen !== 'number') out.yearPollen = out.pollenEver;
   if (!Array.isArray(out.strains) || !out.strains.length) out.strains = freshFarm().strains;
   const ids = new Set(out.strains.map(s => s.id));
   if (!Array.isArray(out.plot) || out.plot.length !== PLOT_MAX * PLOT_MAX) out.plot = freshFarm().plot;

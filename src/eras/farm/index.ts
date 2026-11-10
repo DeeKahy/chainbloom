@@ -9,8 +9,11 @@ import { $, fmt } from '../../core/util';
 import { S } from '../../state/state';
 import { HUES } from './content';
 import { autoRate, bloomTap, fx, isRipe, meadow, offline, plant, seedRate, uproot, update } from './meadow';
-import { initRender, layoutPlot, render, resize, tileCenter, tileFromPoint, bloomFx, floatText, gustFx, view } from './render';
-import { banner, buildUi, frameUi, hybridToast, refreshSeeds, tickUi, ui } from './ui';
+import { initRender, layoutPlot, render, resize, tileCenter, tileFromPoint, bloomFx, floatText, gustFx, honeyFx, view } from './render';
+import { banner, buildUi, frameUi, hybridToast, refreshSeeds, tickUi, ui, winterScene } from './ui';
+import { apiary, apiaryOffline, seedHoneyRate, updateApiary } from './apiary';
+import { checkUnlocks, finishHarvest } from './seasons';
+import { toast } from '../../ui/toast';
 import { playIntro } from './intro';
 import type { Era } from '../era';
 
@@ -97,31 +100,51 @@ const farm: Era = {
     fx.chainEnd = c => { if (c.count >= 6) banner(c.count); };
     fx.hybrid = (s, i) => { hybridToast(s); floatText(i, 'new seed!', HUES[s.hue].col); refreshSeeds(); };
     fx.breeze = i => gustFx(i);
+    fx.honey = (hive, amount) => honeyFx(hive, '+' + fmt(amount) + ' ⬢');
+    fx.reap = i => floatText(i, '🌾', '#c88a12');
+    fx.harvestEnd = c => {
+      const r = finishHarvest(c);
+      void winterScene(r).then(() => { layoutPlot(); tickUi(); toast(`Spring. Plant your meadow again: your ${S.farm.strains.length} strains are waiting.`, '#7fb85a'); });
+      layoutPlot();
+      tickUi();
+    };
+    seedHoneyRate();
     tickUi();
   },
 
   frame(dt) {
     notes = Math.min(6, notes + dt * 14);
     update(dt);
+    updateApiary(dt);
     render(dt);
     frameUi(dt);
   },
 
   tick() {
+    const opened = checkUnlocks();
+    if (opened === 'apiary') {
+      layoutPlot();
+      toast('Something hums beyond the hedge: a hive! Bees will bloom your ripe flowers. See the Apiary tab.', '#d99a1c');
+      tone(392, .8, .05, 'triangle', 784);
+    } else if (opened === 'seasons') {
+      toast('The air turns cooler. The Seasons have come: see the Harvest tab.', '#c88a12');
+      tone(330, 1, .05, 'triangle', 660);
+    }
     tickUi();
   },
 
   autoRate,
 
   catchUp(secs, hidden) {
-    const g = offline(secs, hidden ? 1 : .5);
-    if (!g || secs <= 60) return null;
-    return `While you were ${hidden ? 'tabbed out' : 'away'}, the breeze brought ${fmt(g)} ✿`;
+    const share = hidden ? 1 : .5;
+    const g = offline(secs, share), h = apiaryOffline(secs, share);
+    if ((!g && !h) || secs <= 60) return null;
+    return `While you were ${hidden ? 'tabbed out' : 'away'}, ${S.farm.apiaryOn ? 'the bees' : 'the breeze'} brought ${fmt(g)} ✿` + (h ? ` and ${fmt(h)} ⬢` : '');
   },
 
   intro: playIntro,
 
-  debug: { meadow, layoutPlot, view, tileCenter },
+  debug: { meadow, apiary, layoutPlot, view, tileCenter },
 };
 
 export default farm;
