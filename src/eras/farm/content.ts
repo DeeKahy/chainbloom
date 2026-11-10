@@ -88,7 +88,20 @@ export const growTime = (s: Strain, sun: number): number => GROW_BASE * (1 + .3 
 
 /** Pollen for one bloom at chain depth d. */
 export const bloomValue = (s: Strain, d: number, kindred: boolean, nectar: number, scent: number): number =>
-  potFactor(s.pot) * 1.35 ** nectar * (1 + scentStep(scent)) ** d * (kindred ? 2 : 1);
+  potFactor(s.pot) * 1.35 ** nectar * depthMult(d, scent) * (kindred ? 2 : 1);
+
+/** Chain depth where the bonus stops compounding and turns logarithmic. */
+export const DEPTH_SOFT = 8;
+
+/**
+ * Chain bonus at depth d: compounds by the Sweet Scent step up to DEPTH_SOFT, then only grows with
+ * the log of the extra depth. A 9×9 snake (depth ~80) pays a few times a depth-8 bloom, not 10^12×.
+ */
+export function depthMult(d: number, scent: number): number {
+  const step = scentStep(scent);
+  if (d <= DEPTH_SOFT) return (1 + step) ** d;
+  return (1 + step) ** DEPTH_SOFT * (1 + Math.log(1 + (d - DEPTH_SOFT) * step));
+}
 
 export const scentStep = (l: number): number => .12 + .03 * l;
 export const hybridChance = (l: number): number => .1 + .05 * l;
@@ -104,7 +117,7 @@ export const FL: UpgradeDef[] = [
   { id: 'nectar', name: 'Nectar', base: 15, g: 1.75, max: 25,
     desc: (l, t) => `Pollen per bloom ×${fmt(1.35 ** l)} → ×${fmt(1.35 ** t)}` },
   { id: 'scent', name: 'Sweet Scent', base: 40, g: 2.1, max: 10,
-    desc: (l, t) => `Each bloom deeper in a chain pays +${Math.round(scentStep(l) * 100)}% → +${Math.round(scentStep(t) * 100)}% more` },
+    desc: (l, t) => `Each of the first ${DEPTH_SOFT} blooms deeper in a chain pays +${Math.round(scentStep(l) * 100)}% → +${Math.round(scentStep(t) * 100)}% more (slower after that)` },
   { id: 'breeze', name: 'Breeze', base: 30, g: 2, max: 10,
     desc: (l, t) => l ? `A breeze blooms a ripe flower every ${fmt(breezeEvery(l))}s → ${fmt(breezeEvery(t))}s, even while you're away`
       : `A breeze blooms a ripe flower every ${fmt(breezeEvery(t))}s, even while you're away` },

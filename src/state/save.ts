@@ -176,3 +176,10 @@ export function replaceAndReload(next: GameState): void {
   save(0);
   location.reload();
 }
+
+/** Safety copies made by migrations before eras existed (v1-v10) only hold space progress: delete them. */
+export function dropSpaceBackups(): void {
+  try {
+    for (let v = 1; v <= 10; v++) localStorage.removeItem(`${KEY}_backup_v${v}`);
+  } catch { /* storage blocked */ }
+}

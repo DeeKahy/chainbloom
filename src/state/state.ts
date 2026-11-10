@@ -172,3 +172,13 @@ export function sanitizeState(): boolean {
   for (const k of Object.keys(farm)) fix(farm, k);
   return ok;
 }
+
+/**
+ * Once a later era has started, earlier eras are gone for good: their progress is reset to fresh
+ * values, so only the current era's slice and the settings are kept (and saved).
+ */
+export function dropEarlierEras(): void {
+  if (S.era < 1) return;
+  const keep: Partial<GameState> = { version: S.version, era: S.era, farm: S.farm, mute: S.mute, saved: S.saved, lastRate: S.lastRate };
+  replaceState(Object.assign(fresh(), keep));
+}

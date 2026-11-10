@@ -19,6 +19,8 @@ export interface Chain {
   live: number;
   /** Tile it started on. */
   origin: number;
+  /** Tiles that already bloomed in this chain: each flower blooms at most once per chain, so chains end. */
+  done: Set<number>;
 }
 
 export interface Grain {
@@ -123,9 +125,10 @@ export function targetsOf(i: number, s: Strain): number[] {
 
 function bloom(i: number, chain: Chain, depth: number, kindred: boolean): void {
   const f = F(), p = f.plot[i];
-  if (!p || p.g < 1) return;
+  if (!p || p.g < 1 || chain.done.has(i)) return;
   const s = strainById(p.s);
   if (!s) return;
+  chain.done.add(i);
   p.g = 0;
   const v = bloomValue(s, depth, kindred, f.lv.nectar, f.lv.scent);
   f.pollen = Math.min(f.pollen + v, Number.MAX_VALUE);
@@ -148,7 +151,7 @@ function bloom(i: number, chain: Chain, depth: number, kindred: boolean): void {
 /** A tap on a ripe flower. Returns false if it wasn't ripe. */
 export function bloomTap(i: number, auto = false): boolean {
   if (!isRipe(i)) return false;
-  const chain: Chain = { count: 0, pay: 0, auto, live: 0, origin: i };
+  const chain: Chain = { count: 0, pay: 0, auto, live: 0, origin: i, done: new Set() };
   bloom(i, chain, 0, false);
   if (!chain.live) endChain(chain);
   return true;
@@ -165,10 +168,10 @@ function land(g: Grain): void {
   const f = F(), p = f.plot[g.to];
   if (p) {
     const target = strainById(p.s), from = strainById(g.strain);
-    if (p.g >= 1 && target) {
+    if (p.g >= 1 && target && !g.chain.done.has(g.to)) {
       if (from && from.id !== target.id && Math.random() < hybridChance(f.lv.wild)) discover(breed(from, target), g.to);
       bloom(g.to, g.chain, g.depth + 1, !!from && from.hue === target.hue);
-    } else if (p.g < 1) {
+    } else if (p.g < 1 && !g.chain.done.has(g.to)) {
       p.g = Math.min(1, p.g + POLLEN_BOOST);
       fx.grow?.(g.to);
     }

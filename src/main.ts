@@ -1,8 +1,8 @@
 import './style.css';
 import { $ } from './core/util';
 import { ERAS, setNextEraHandler, type Era } from './eras/era';
-import { load, save } from './state/save';
-import { S } from './state/state';
+import { dropSpaceBackups, load, save } from './state/save';
+import { dropEarlierEras, S } from './state/state';
 import { toast } from './ui/toast';
 
 /**
@@ -22,6 +22,7 @@ let switching = false;
 
 async function startEra(index: number): Promise<Era> {
   const e = (await ERAS[index]()).default;
+  if (index > 0) { dropEarlierEras(); dropSpaceBackups(); }
   document.body.classList.add(e.theme);
   document.title = e.name;
   $<HTMLMetaElement>('meta[name="theme-color"]').content = e.chrome;
@@ -39,6 +40,7 @@ async function nextEra(): Promise<void> {
   const next = (await ERAS[S.era + 1]()).default;
   await next.intro?.();
   S.era++;
+  dropEarlierEras();
   S.saved = Date.now();
   save(0);
   // The old era's DOM, listeners and GPU state are simplest to drop with the page itself.
